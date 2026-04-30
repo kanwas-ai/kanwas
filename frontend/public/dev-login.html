@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+  const token = new URLSearchParams(location.search).get('token')
+  if (token) {
+    localStorage.setItem('auth_token', token)
+    location.href = '/'
+  }
+</script>
+</body>
+</html>

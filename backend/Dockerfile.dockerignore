@@ -1,0 +1,23 @@
+# Node modules in all directories
+**/node_modules
+**/build
+**/.env*
+# But include production/staging env files
+!frontend/.env.production
+!frontend/.env.staging
+**/.git
+**/.DS_Store
+**/coverage
+# Exclude dist folders
+frontend/dist
+backend/dist
+**/*.log
+# temp
+/tmp
+
+# Exclude non-essential directories for backend build
+.github/
+docs/
+*.md
+e2b.toml
+execenv/

@@ -1,0 +1,35 @@
+{
+  "name": "kanwas",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\""
+  },
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.5.3"
+  },
+  "lint-staged": {
+    "!(backend/.adonisjs)/**/*.{ts,tsx,js,jsx,json,md,yml,yaml}": [
+      "pnpm exec prettier --write"
+    ],
+    "backend/!(.adonisjs)/**/*.{ts,js}": [
+      "pnpm --filter backend run lint --fix"
+    ],
+    "frontend/**/*.{ts,tsx,js,jsx}": [
+      "pnpm --filter frontend run lint --fix"
+    ]
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@blocknote/core@0.46.0": "patches/@blocknote__core@0.46.0.patch"
+    },
+    "overrides": {
+      "prosemirror-view": "1.41.4",
+      "@blocknote/core": "0.46.0",
+      "@blocknote/server-util": "0.46.0"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+name: Frontend Tests
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'frontend/**'
+      - 'shared/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'patches/**'
+      - '.github/workflows/test-frontend.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'frontend/**'
+      - 'shared/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'patches/**'
+      - '.github/workflows/test-frontend.yml'
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm', cache-dependency-path: 'pnpm-lock.yaml' }
+
+      - run: pnpm install --frozen-lockfile --filter frontend...
+      - run: pnpm --filter shared build
+
+      - name: TypeScript
+        run: pnpm --filter frontend exec tsc --noEmit
+
+      - name: Lint
+        run: pnpm --filter frontend lint
+
+      - name: Build
+        run: pnpm --filter frontend build

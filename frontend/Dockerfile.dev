@@ -1,0 +1,34 @@
+# Development Dockerfile for frontend
+# Build context must be the repo root (see docker-compose.yml)
+FROM node:22-slim
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# Workspace manifests + patches so pnpm can resolve the locked graph
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY patches/ ./patches/
+COPY shared/package.json ./shared/
+COPY backend/package.json ./backend/
+COPY frontend/package.json ./frontend/
+
+# Install frontend + its workspace deps (shared, backend) using the frozen lockfile
+RUN HUSKY=0 pnpm install --frozen-lockfile --filter frontend...
+
+# Build shared so Vite resolves `shared` imports to the dist bundle at runtime
+COPY shared ./shared
+RUN pnpm --filter shared build
+
+# Copy backend source - frontend imports types and a handful of values (socket channels)
+# directly from backend via its exports map, which points at .ts source files
+COPY backend ./backend
+
+# Copy frontend source
+COPY frontend ./frontend
+
+WORKDIR /app/frontend
+
+EXPOSE 5173
+
+CMD ["pnpm", "run", "dev"]

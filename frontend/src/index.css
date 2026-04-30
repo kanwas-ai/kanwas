@@ -1,0 +1,1645 @@
+@import 'tailwindcss';
+@plugin "@tailwindcss/typography";
+@source "../node_modules/streamdown/dist/*.js";
+
+@variant dark (&:is(.dark, .dark *));
+
+/* Prevent Chrome's swipe-to-navigate (back/forward) on Mac trackpad */
+html {
+  overscroll-behavior-x: none;
+}
+
+:root {
+  /* === Palette === */
+  --palette-tooltip: #1d1d1d; /* Always dark — does not flip in dark mode */
+  --palette-ink: #2c2920;
+  --palette-charcoal: #353535;
+  --palette-graphite: #4b4b4b;
+
+  --palette-ink-70: rgba(44, 41, 32, 0.7);
+  --palette-ink-50: rgba(44, 41, 32, 0.5);
+  --palette-ink-30: rgba(44, 41, 32, 0.3);
+  --palette-ink-5: rgba(44, 41, 32, 0.05);
+
+  --palette-warm-gray: #f1f0ef;
+  --palette-light-gray: #ebebeb;
+  --palette-cool-gray: #e5e3e1;
+  --palette-selection: #dad9d7;
+  --palette-border: #f8f7f1;
+  --palette-border-soft: #d5d5d5;
+  --palette-border-mid: #dfdfdf;
+
+  --palette-amber: #e8a300;
+  --palette-gold: #d69600;
+  --palette-amber-bright: #ffb300;
+  --palette-amber-light: #f0d69a;
+  --palette-cream: #f9f1de;
+  --palette-blue: #0b6e99;
+
+  /* === File sidebar === */
+  --sidebar-surface: var(--canvas);
+  --sidebar-border: var(--palette-border);
+  --sidebar-edge-border: #f0ece0;
+  --chat-sidebar-border: #f2eee4;
+  --chat-divider: #f8f7f1;
+  --sidebar-selection: #f3f0e9;
+  --sidebar-hover: #f7f5ef;
+  --surface-subtle: #fbf8ee;
+  --sidebar-icon: var(--palette-ink-30);
+  --sidebar-label: var(--palette-ink-50);
+
+  /* === Chat radii === */
+  --chat-radius: 14px;
+
+  /* === Chat === */
+  --chat-bubble-bg: var(--palette-ink-5);
+  --chat-pill-bg: #fffbf5;
+  --chat-pill-border: #f9f1e3;
+  --chat-pill-shadow: none;
+  --chat-pill-text: rgba(97, 80, 26, 0.7);
+  --chat-pill-icon: var(--palette-ink-30);
+  --chat-chip-bg: var(--palette-warm-gray);
+  --chat-chip-text: var(--foreground);
+  --chat-clear-bg: #f3f0e9;
+  --chat-link: var(--palette-amber);
+
+  /* === Chat toolbar buttons === */
+  --chat-toolbar-gradient: linear-gradient(180deg, var(--palette-graphite), var(--palette-ink));
+  --chat-toolbar-shadow: 0 2px 2px rgba(0, 0, 0, 0.15);
+  --chat-mic-bg: var(--palette-light-gray);
+  --chat-mic-border: var(--palette-border-soft);
+  --chat-mic-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.05), inset 0 0 12px 0 white;
+  --chat-submit-bg: black;
+  --chat-submit-border: #464646;
+  --chat-submit-shadow: 0 2px 10px 0 rgba(47, 42, 32, 0.5);
+  --chat-submit-inner-shadow: inset 0 0 7px 0 rgba(255, 255, 255, 0.6);
+
+  /* === Subagent card === */
+  --chat-subagent-bg: linear-gradient(180deg, rgba(232, 163, 0, 0.05) 0%, rgba(232, 163, 0, 0.1) 100%);
+  --chat-subagent-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 12px rgba(232, 163, 0, 0.15);
+
+  /* === Chat input card === */
+  --chat-input-bg: rgba(249, 249, 249, 0.9);
+  --chat-input-border: white;
+  --chat-input-border-accent: #ffcc55;
+  --chat-input-shadow: 0px 4px 20px 0px rgba(0, 0, 0, 0.08);
+  --chat-input-inner-shadow: inset 0px 0px 20px 8px white;
+
+  /* === Node card === */
+  --card-border: #f1ebdf;
+  --card-border-accent: var(--palette-amber-light);
+  --card-shadow: 0 8px 28px rgba(86, 75, 44, 0.1);
+
+  /* Backgrounds */
+  --canvas: #faf9f5;
+  --canvas-background: #faf9f5;
+  --canvas-card: #f0f0f0;
+  --grid-color: #dadada80;
+  --outline: #f8f7f1;
+  --editor: var(--palette-warm-gray);
+  --editor-selected-outline: var(--palette-charcoal);
+  --toolbar-surface: #ffffff;
+  --chat-background: #fdfcf8;
+
+  --code-block: var(--surface-subtle);
+
+  /* Text */
+  --foreground: var(--palette-ink);
+  --chat-text: var(--palette-ink);
+  --block-highlight: #e5e5e5;
+  --block-hover: #ececec;
+  --muted-foreground: var(--palette-ink-50);
+  --focused-background: rgba(232, 163, 0, 0.05);
+  --focused-content: var(--palette-amber);
+  --document-name: #929292;
+
+  --primary-button-foreground: #1d1d1d;
+  --primary-button-background: #fff;
+  --primary-button-outline: #e2e2e2;
+
+  --primary-button-active-outline: #1d1d1d;
+  --primary-button-active-background: #f5f5f5;
+
+  --secondary-button-foreground: rgba(53, 53, 53, 0.4);
+  --secondary-button-background: transparent;
+  --secondary-button-outline: rgba(198, 198, 198, 0.3);
+
+  --secondary-button-active-foreground: #fff;
+  --secondary-button-active-background: var(--palette-charcoal);
+  --secondary-button-active-outline: rgba(198, 198, 198, 0.3);
+
+  --sidebar-bg: #222222;
+  --sidebar-inactive-bg: #000;
+  --sidebar-inactive-content: rgba(255, 255, 255, 0.4);
+  --sidebar-active-bg: #3c3c3c;
+  --sidebar-active-content: #fff;
+  --sidebar-active-outline: rgba(255, 255, 255, 0.1);
+  --sidebar-item-text: var(--palette-ink-50);
+  --sidebar-item-text-active: var(--palette-ink);
+
+  /* Status colors */
+  --status-success: #22c55e;
+  --status-error: #ef4444;
+  --toast-success: #6dba7a;
+
+  /* Shadows */
+  --secondary-button-shadow: 0 2px 2px #4141410a, inset 0 0 8px #ffffff4d;
+
+  /* Primary button gradient - derived from secondary-button-active-background */
+  --primary-button-gradient-start: color-mix(in srgb, var(--secondary-button-active-background) 85%, white);
+  --primary-button-gradient-end: color-mix(in srgb, var(--secondary-button-active-background) 100%, black 15%);
+  --primary-button-gradient: linear-gradient(
+    180deg,
+    var(--primary-button-gradient-start) 0%,
+    var(--primary-button-gradient-end) 100%
+  );
+  --primary-button-border: color-mix(in srgb, var(--secondary-button-active-background) 70%, white);
+  --primary-button-shadow: 0 2px 2px rgba(0, 0, 0, 0.15);
+}
+
+.dark {
+  /* === Palette dark overrides === */
+  --palette-ink: #c6c5c5;
+  --palette-charcoal: #c6c5c5;
+  --palette-ink-70: rgba(198, 197, 197, 0.7);
+  --palette-ink-50: rgba(198, 197, 197, 0.7);
+  --palette-ink-30: rgba(198, 197, 197, 0.3);
+  --palette-ink-5: rgba(198, 197, 197, 0.05);
+
+  --palette-warm-gray: #2b2b2b;
+  --palette-light-gray: #1f1f1f;
+  --palette-cool-gray: #313030;
+  --palette-selection: #2b2b2b;
+  --palette-border: #2b2b2b;
+  --palette-border-soft: #0f0f0f;
+  --palette-border-mid: #0f0f0f;
+
+  --palette-amber-bright: #ffd268;
+  --palette-amber-light: #775f26;
+  --palette-cream: #39362e;
+  --palette-blue: #5eb0d3;
+
+  /* === Sidebar === */
+  --sidebar-surface: var(--palette-cool-gray);
+  --sidebar-border: #282828;
+  --sidebar-edge-border: #2b2b2b;
+  --chat-sidebar-border: #2b2b2b;
+  --chat-divider: var(--outline);
+  --sidebar-selection: var(--palette-selection);
+  --sidebar-hover: #333333;
+  --surface-subtle: #3a3838;
+  --sidebar-icon: var(--palette-ink-30);
+  --sidebar-label: var(--palette-ink-70);
+
+  /* === Chat surfaces === */
+  --chat-background: #313030;
+  --chat-bubble-bg: var(--palette-light-gray);
+  --chat-pill-bg: #262626;
+  --chat-pill-border: #1a1a1a;
+  --chat-pill-shadow: none;
+  --chat-pill-text: rgba(198, 197, 197, 0.7);
+  --chat-pill-icon: rgba(198, 197, 197, 0.3);
+  --chat-chip-bg: rgba(198, 197, 197, 0.3);
+  --chat-chip-text: rgba(198, 197, 197, 0.7);
+  --chat-clear-bg: var(--palette-light-gray);
+  --chat-link: var(--palette-amber);
+
+  /* === Chat toolbar === */
+  --chat-toolbar-gradient: none;
+  --chat-mic-bg: var(--palette-light-gray);
+  --chat-mic-border: var(--palette-border-soft);
+  --chat-mic-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), inset 0 0 12px 0 rgba(255, 255, 255, 0.09);
+  --chat-submit-bg: #e5e5e5;
+  --chat-submit-border: #ffffff;
+  --chat-submit-shadow: 0 2px 10px 0 rgba(47, 42, 32, 0.5);
+  --chat-submit-inner-shadow: inset 0 0 7px 0 rgba(255, 255, 255, 0.5);
+
+  /* === Subagent card === */
+  --chat-subagent-bg: var(--palette-cream);
+  --chat-subagent-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 0 12px rgba(255, 255, 255, 0.3);
+
+  /* === Chat input card === */
+  --chat-input-bg: #1f1f1f;
+  --chat-input-border: #140e00;
+  --chat-input-border-accent: #d0bd92;
+  --chat-input-shadow: 0 0 18px 0 rgba(0, 0, 0, 0.5);
+  --chat-input-inner-shadow: inset 0 0 12px 0 rgba(255, 255, 255, 0.16);
+
+  /* === Node card === */
+  --card-border: var(--outline);
+  --card-border-accent: var(--palette-amber-light);
+  --card-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+
+  /* Backgrounds */
+  --xy-background-color: #313030;
+  --canvas: #313030;
+  --canvas-background: #313030;
+  --canvas-card: #353535;
+  --grid-color: #3a3a3a;
+  --editor: #2b2b2b;
+  --editor-selected-outline: #4d4d4d;
+  --toolbar-surface: #1f1f1f;
+  --outline: #252525;
+  --document-name: #4e4e4e;
+
+  --code-block: var(--surface-subtle);
+
+  /* Text */
+  --block-highlight: #212121;
+  --block-hover: #282828;
+
+  --primary-button-foreground: #1d1d1d;
+  --primary-button-background: #e5e5e5;
+  --primary-button-outline: #e5e5e5;
+
+  --primary-button-active-outline: #e5e5e5;
+  --primary-button-active-background: #d4d4d4;
+
+  --secondary-button-foreground: rgba(229, 229, 229, 0.4);
+  --secondary-button-background: transparent;
+  --secondary-button-outline: rgba(198, 198, 198, 0.3);
+
+  --secondary-button-active-foreground: #1d1d1d;
+  --secondary-button-active-background: #e5e5e5;
+  --secondary-button-active-outline: rgba(198, 198, 198, 0.3);
+
+  /* Status colors */
+  --status-success: #4ade80;
+  --status-error: #f87171;
+  --toast-success: #7eae88;
+
+  /* Sidebar - light text for dark mode */
+  --sidebar-item-text: rgba(255, 255, 255, 0.5);
+  --sidebar-item-text-active: #e5e5e5;
+
+  /* Shadows */
+  --secondary-button-shadow: 0 2px 2px #0000001a, inset 0 0 8px #ffffff0b;
+
+  /* Primary button gradient - derived from secondary-button-active-background */
+  --primary-button-gradient-start: color-mix(in srgb, var(--secondary-button-active-background) 100%, white 10%);
+  --primary-button-gradient-end: color-mix(in srgb, var(--secondary-button-active-background) 85%, black);
+  --primary-button-gradient: linear-gradient(
+    180deg,
+    var(--primary-button-gradient-start) 0%,
+    var(--primary-button-gradient-end) 100%
+  );
+  --primary-button-border: color-mix(in srgb, var(--secondary-button-active-background) 80%, black);
+  --primary-button-shadow: 0 2px 2px rgba(0, 0, 0, 0.25);
+}
+
+.bn-editor .bn-detached-agent-cursor {
+  pointer-events: none;
+}
+
+.bn-editor .bn-detached-agent-cursor .bn-collaboration-cursor__caret {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.15),
+    0 0 10px rgb(124 58 237 / 0.35);
+  animation: detached-agent-cursor-blink 1.05s steps(1) infinite;
+}
+
+.bn-editor .bn-detached-agent-cursor .bn-collaboration-cursor__label {
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 14px rgb(124 58 237 / 0.22);
+}
+
+@keyframes detached-agent-cursor-blink {
+  0%,
+  46% {
+    opacity: 1;
+  }
+
+  47%,
+  100% {
+    opacity: 0.45;
+  }
+}
+
+/* Tailwind theme with descriptive color names */
+@theme {
+  /* Backgrounds */
+  --color-canvas: var(--canvas); /* Main canvas background */
+  --color-canvas-background: var(--canvas-background); /* Main canvas background */
+  --color-canvas-card: var(--canvas-card); /* Canvas card/node background */
+  --color-editor: var(--editor);
+  --color-editor-selected-outline: var(--editor-selected-outline);
+  --color-toolbar-surface: var(--toolbar-surface);
+  --color-chat-background: var(--chat-background);
+
+  /* Text */
+  --color-foreground: var(--foreground); /* Main text color */
+  --color-chat-text: var(--chat-text); /* Chat-specific text color */
+  --color-foreground-muted: var(--muted-foreground); /* Subdued text, icons */
+  --color-muted: var(--muted-foreground); /* Alias for text-muted */
+  --color-document-name: var(--document-name);
+
+  /* latest colors */
+  --color-sidebar: var(--sidebar-bg);
+  --color-sidebar-item: var(--sidebar-inactive-bg);
+  --color-sidebar-item-content: var(--sidebar-inactive-content);
+  --color-sidebar-active: var(--sidebar-active-bg);
+  --color-sidebar-active-content: var(--sidebar-active-content);
+  --color-sidebar-active-outline: var(--sidebar-active-outline);
+  --color-sidebar-item-text: var(--sidebar-item-text);
+  --color-sidebar-item-text-active: var(--sidebar-item-text-active);
+  --color-outline: var(--outline);
+  --color-active-outline: var(--outline);
+  --color-block-highlight: var(--block-highlight);
+  --color-block-hover: var(--block-hover);
+  --color-focused: var(--focused-background);
+  --color-focused-content: var(--focused-content);
+
+  --color-primary-button-foreground: var(--primary-button-foreground);
+  --color-primary-button-background: var(--primary-button-background);
+  --color-primary-button-outline: var(--primary-button-outline);
+
+  --color-primary-button-active-outline: var(--primary-button-active-outline);
+  --color-primary-button-active-background: var(--primary-button-active-background);
+
+  --color-secondary-button-foreground: var(--secondary-button-foreground);
+  --color-secondary-button-background: var(--secondary-button-background);
+  --color-secondary-button-outline: var(--secondary-button-outline);
+
+  --color-secondary-button-active-foreground: var(--secondary-button-active-foreground);
+  --color-secondary-button-active-background: var(--secondary-button-active-background);
+  --color-secondary-button-active-outline: var(--secondary-button-active-outline);
+
+  /* Status colors */
+  --color-status-success: var(--status-success);
+  --color-status-error: var(--status-error);
+
+  /* Chat */
+  --color-chat-bubble: var(--chat-bubble-bg);
+  --color-chat-pill: var(--chat-pill-bg);
+  --color-chat-pill-border: var(--chat-pill-border);
+  --color-chat-pill-text: var(--chat-pill-text);
+  --color-chat-pill-icon: var(--chat-pill-icon);
+  --color-chat-clear: var(--chat-clear-bg);
+  --color-chat-link: var(--chat-link);
+
+  /* File sidebar */
+  --color-sidebar-surface: var(--sidebar-surface);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-selection: var(--sidebar-selection);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-icon: var(--sidebar-icon);
+  --color-sidebar-label: var(--sidebar-label);
+
+  /* Node card */
+  --color-card-border-accent: var(--card-border-accent);
+
+  /* Chat chips */
+  --color-chat-chip: var(--chat-chip-bg);
+  --color-chat-chip-text: var(--chat-chip-text);
+}
+
+/* Fix react-arborist focus blue on tree rows */
+[role='treeitem']:focus,
+[role='treeitem']:focus-visible {
+  outline: none;
+}
+
+/* Theme transitions */
+@layer utilities {
+  .theme-transition * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 300ms;
+    transition-timing-function: ease;
+  }
+}
+
+/* Icon gradient - 20% brighter at top */
+.icon-gradient {
+  --icon-color: currentColor;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--icon-color), white 20%) 0%, var(--icon-color) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Animations */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Shimmer animation for active status items */
+@keyframes shimmer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-skeleton {
+  background: linear-gradient(90deg, var(--outline) 25%, var(--muted-foreground) 50%, var(--outline) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.8s ease-in-out infinite;
+  opacity: 0.4;
+}
+
+.shadow-secondary-button {
+  box-shadow: var(--secondary-button-shadow);
+}
+
+.shadow-chat-pill {
+  box-shadow: var(--chat-pill-shadow);
+}
+
+.text-chat-link {
+  font-weight: 600;
+}
+
+/* Clip-to-document button: fill icon on hover */
+.clip-to-doc-btn:hover svg {
+  fill: currentColor;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes thinking-stream {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.86;
+  }
+}
+
+.animate-thinking-stream {
+  animation: thinking-stream 0.5s ease-in-out infinite;
+}
+
+/* Warning text glow animation */
+@keyframes warning-text-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 0 transparent;
+  }
+  50% {
+    text-shadow:
+      0 0 8px rgba(251, 191, 36, 0.8),
+      0 0 16px rgba(251, 191, 36, 0.4);
+  }
+}
+
+.animate-warning-glow {
+  animation: warning-text-glow 0.6s ease-in-out 2;
+}
+
+/* Amber border pulse for contextual tips (voice input hint) */
+@keyframes amber-border-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(232, 163, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(232, 163, 0, 0);
+  }
+}
+
+@keyframes node-active-edge-top {
+  0% {
+    left: -72px;
+    opacity: 0;
+  }
+
+  2% {
+    opacity: 1;
+  }
+
+  25% {
+    left: calc(100% + 4px);
+    opacity: 1;
+  }
+
+  26%,
+  100% {
+    left: calc(100% + 4px);
+    opacity: 0;
+  }
+}
+
+@keyframes node-active-edge-right {
+  0%,
+  24% {
+    top: -72px;
+    opacity: 0;
+  }
+
+  25% {
+    top: -72px;
+    opacity: 0;
+  }
+
+  27% {
+    opacity: 1;
+  }
+
+  50% {
+    top: calc(100% + 4px);
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    top: calc(100% + 4px);
+    opacity: 0;
+  }
+}
+
+@keyframes node-active-edge-bottom {
+  0%,
+  49% {
+    right: -72px;
+    opacity: 0;
+  }
+
+  50% {
+    right: -72px;
+    opacity: 0;
+  }
+
+  52% {
+    opacity: 1;
+  }
+
+  75% {
+    right: calc(100% + 4px);
+    opacity: 1;
+  }
+
+  76%,
+  100% {
+    right: calc(100% + 4px);
+    opacity: 0;
+  }
+}
+
+@keyframes node-active-edge-left {
+  0%,
+  74% {
+    bottom: -72px;
+    opacity: 0;
+  }
+
+  75% {
+    bottom: -72px;
+    opacity: 0;
+  }
+
+  77% {
+    opacity: 1;
+  }
+
+  100% {
+    bottom: calc(100% + 4px);
+    opacity: 1;
+  }
+}
+
+.animate-amber-pulse {
+  animation: amber-border-pulse 2s ease-in-out infinite;
+}
+
+@keyframes direct-mode-tip-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(11, 110, 153, 0.34);
+  }
+
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 8px rgba(11, 110, 153, 0);
+  }
+}
+
+.animate-direct-mode-tip {
+  animation: direct-mode-tip-pulse 1.4s ease-in-out infinite;
+}
+
+/* Node collapse/expand animation */
+@keyframes node-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.node-collapse-enter {
+  animation: node-fade-in 150ms ease-out;
+}
+
+/* React Flow overrides */
+@layer components {
+  .react-flow__controls {
+    background-color: rgb(var(--canvas)) !important;
+    border: 1px solid rgb(var(--border)) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .react-flow__controls-button {
+    background-color: rgb(var(--canvas)) !important;
+    border-color: rgb(var(--border)) !important;
+    color: rgb(var(--foreground)) !important;
+  }
+
+  .react-flow__controls-button:hover {
+    background-color: rgb(var(--secondary)) !important;
+  }
+
+  .react-flow__controls-button svg {
+    fill: rgb(var(--foreground)) !important;
+  }
+
+  .react-flow__attribution {
+    display: none;
+  }
+
+  i.left-align {
+    display: inline-flex !important;
+  }
+}
+
+/* BlockNote Placeholder Styles */
+[data-content-type='paragraph'] .bn-inline-content::before {
+  color: color-mix(in srgb, var(--foreground) 30%, transparent) !important;
+}
+
+[data-content-type='paragraph'] .bn-inline-content:empty::before {
+  color: color-mix(in srgb, var(--foreground) 30%, transparent) !important;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overscroll-behavior-x: none;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--canvas-background);
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.chat-sidebar {
+  background: var(--chat-background);
+}
+
+/* App specific styles */
+
+.nodrag {
+  user-select: all;
+  cursor: text;
+}
+
+/* Smooth transitions for pushed/snapped nodes */
+.react-flow__node {
+  transition: transform 150ms ease-out;
+}
+.react-flow__node.dragging {
+  transition: none !important;
+  z-index: 1000 !important;
+}
+
+.canvas-multi-dragging .react-flow__node.selected {
+  transition: none !important;
+}
+
+/* Disable blue selection highlight on nodes */
+.react-flow__node.selected {
+  background: transparent !important;
+}
+
+/* Group background nodes: no ReactFlow chrome (selection, outline, shadow) */
+.react-flow__node-groupBackground {
+  box-shadow: none !important;
+  outline: none !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+/* Optional: Also disable for selection box if needed */
+.react-flow__nodesselection-rect {
+  background: transparent !important;
+  border: none !important;
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+/* Image nodes should auto-size height based on content */
+.react-flow__node-image {
+  height: fit-content !important;
+}
+
+/* Sticky note editor: fill the sticky note so clicks anywhere focus the editor */
+.sticky-note-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sticky-note-editor > [class*='bn-'],
+.sticky-note-editor .bn-container,
+.sticky-note-editor .bn-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sticky note editor: compact BlockNote with custom font/size.
+   Force dark text — sticky notes have pastel backgrounds in all themes. */
+.sticky-note-editor .bn-editor {
+  color: var(--sticky-text-color, #1a1a1a) !important;
+  font-size: 32px !important;
+  line-height: 1.15 !important;
+  font-family: var(--sticky-font) !important;
+  font-weight: 500 !important;
+}
+
+.sticky-note-editor .bn-inline-content,
+.sticky-note-editor [data-content-type='paragraph'] .bn-inline-content,
+.sticky-note-editor [data-content-type='bulletListItem'],
+.sticky-note-editor [data-content-type='numberedListItem'],
+.sticky-note-editor [data-content-type='checkListItem'] .bn-inline-content {
+  color: var(--sticky-text-color, #1a1a1a) !important;
+  font-size: 32px !important;
+  line-height: 1.15 !important;
+  font-weight: 500 !important;
+}
+
+.sticky-note-editor .bn-inline-content::before {
+  content: 'Type here...' !important;
+  color: color-mix(in srgb, var(--sticky-text-color, #1a1a1a) 30%, transparent) !important;
+  font-style: normal !important;
+  font-weight: 500 !important;
+}
+
+/* Only show placeholder when the sticky note is completely empty (single empty block) */
+.sticky-note-editor .bn-block-outer:not(:only-child) .bn-inline-content::before {
+  display: none !important;
+}
+
+.sticky-note-editor .bn-default-styles {
+  font-family: var(--sticky-font) !important;
+}
+
+.sticky-note-editor .bn-editor .bn-block-outer {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.sticky-note-editor .bn-editor .bn-block-group .bn-block-group {
+  margin-left: 20px !important;
+}
+
+/* Base paragraph and content styles */
+.bn-editor {
+  font-family: -apple-system, system-ui, sans-serif;
+  padding: 0 !important;
+  background-color: unset !important;
+}
+
+/* Inline bold: explicit 700 so strong/b override the 500 body weight consistently */
+.bn-editor strong,
+.bn-editor b {
+  font-weight: 700;
+}
+
+/* Mantine dropdowns inside BlockNote's toolbar are rendered inline, not portaled. */
+.bn-mantine .bn-formatting-toolbar {
+  overflow: visible;
+}
+
+/* Hide the add block button and any wrapper/sibling elements in side menu */
+.bn-side-menu [data-test='dragHandleAdd'] {
+  display: none !important;
+}
+
+/* Hide any element that is not the drag handle in the side menu */
+.bn-side-menu > *:not([data-test='dragHandle']):not(:has([data-test='dragHandle'])) {
+  display: none !important;
+}
+
+/* Code block styles - plain monospace text, no syntax highlighting */
+[data-content-type='codeBlock'] {
+  background-color: var(--code-block) !important;
+  border-radius: 6px;
+}
+
+[data-content-type='codeBlock'] pre {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  color: var(--foreground);
+}
+
+[data-content-type='codeBlock'] pre,
+[data-content-type='codeBlock'] code {
+  white-space: pre !important;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace !important;
+}
+
+/* Hide language selector since we don't use syntax highlighting */
+[data-content-type='codeBlock'] > div:first-child:has(select) {
+  display: none !important;
+}
+
+[data-content-type='paragraph'] {
+  margin-bottom: 3px;
+}
+
+[data-content-type='paragraph'] .bn-inline-content {
+  color: var(--foreground);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.65rem;
+}
+
+/* Heading Styles */
+[data-content-type='heading'] h1,
+[data-content-type='heading'] h2,
+[data-content-type='heading'] h3 {
+  color: var(--foreground);
+}
+
+[data-content-type='heading'] h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 20px;
+  margin-bottom: 4px;
+}
+
+[data-content-type='heading'] h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 16px;
+  margin-bottom: 4px;
+}
+
+[data-content-type='heading'] h3 {
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+
+/* Remove top spacing from first block */
+.bn-editor > .bn-block-group > .bn-block-outer:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+
+
+.bn-editor > .bn-block-group > .bn-block-outer:first-child h1,
+.bn-editor > .bn-block-group > .bn-block-outer:first-child h2,
+.bn-editor > .bn-block-group > .bn-block-outer:first-child h3 {
+  margin-top: 0;
+}
+
+/* List Styles */
+[data-content-type='bulletListItem'] {
+  font-size: 1rem;
+  line-height: 1.65rem;
+  list-style-type: disc;
+}
+
+[data-content-type='bulletListItem'] .bn-inline-content {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+[data-content-type='numberedListItem'] {
+  font-size: 1rem;
+  line-height: 1.65rem;
+  list-style-type: decimal;
+}
+
+[data-content-type='numberedListItem'] .bn-inline-content {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+[data-content-type='checkListItem'] .bn-inline-content {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+/* Tighter list item spacing */
+.bn-block-content[data-content-type='bulletListItem'],
+.bn-block-content[data-content-type='numberedListItem'],
+.bn-block-content[data-content-type='checkListItem'] {
+  padding: 3px 0;
+}
+
+/* Space after lists - target last list item using :has() */
+.bn-block-outer:has(> .bn-block > .bn-block-content[data-content-type='bulletListItem']):not(
+    :has(+ .bn-block-outer > .bn-block > .bn-block-content[data-content-type='bulletListItem'])
+  ) {
+  margin-bottom: 3px;
+}
+
+.bn-block-outer:has(> .bn-block > .bn-block-content[data-content-type='numberedListItem']):not(
+    :has(+ .bn-block-outer > .bn-block > .bn-block-content[data-content-type='numberedListItem'])
+  ) {
+  margin-bottom: 3px;
+}
+
+.bn-block-outer:has(> .bn-block > .bn-block-content[data-content-type='checkListItem']):not(
+    :has(+ .bn-block-outer > .bn-block > .bn-block-content[data-content-type='checkListItem'])
+  ) {
+  margin-bottom: 3px;
+}
+
+/* Quote/Blockquote Styles */
+[data-content-type='quote'] {
+  margin-bottom: 8px;
+}
+
+[data-content-type='quote'] blockquote {
+  border-left: none !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding-left: 11px !important;
+  position: relative;
+}
+
+[data-content-type='quote'] blockquote::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--palette-amber);
+  border-radius: 3px;
+}
+
+[data-content-type='quote'] .bn-inline-content {
+  font-style: italic;
+  font-size: 1rem;
+  font-weight: 450;
+  line-height: 1.6rem;
+  color: var(--palette-ink-50);
+}
+
+/* Table styles */
+.bn-editor table {
+  border-radius: 8px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.bn-editor table th,
+.bn-editor table td {
+  border: 0 solid #EAE6E0;
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+  padding: 6px 12px;
+  background-color: var(--surface-subtle);
+}
+
+/* First row / first column provide the missing outer edges (no doubling internally) */
+.bn-editor table tr:first-child th,
+.bn-editor table tr:first-child td {
+  border-top-width: 1px;
+}
+
+.bn-editor table tr th:first-child,
+.bn-editor table tr td:first-child {
+  border-left-width: 1px;
+}
+
+/* Header row styling — first row and any explicit <th> */
+.bn-editor table th,
+.bn-editor table tr:first-child td,
+.bn-editor table tr:first-child th {
+  background-color: var(--sidebar-selection);
+  font-weight: 700;
+}
+
+/* Border radius on corners */
+.bn-editor table tr:first-child th:first-child,
+.bn-editor table tr:first-child td:first-child {
+  border-top-left-radius: 8px;
+}
+
+.bn-editor table tr:first-child th:last-child,
+.bn-editor table tr:first-child td:last-child {
+  border-top-right-radius: 8px;
+}
+
+.bn-editor table tr:last-child td:first-child {
+  border-bottom-left-radius: 8px;
+}
+
+.bn-editor table tr:last-child td:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+/* Dark mode table */
+.dark .bn-editor table {
+  border-color: #4a4a4a !important;
+}
+.dark .bn-editor table td,
+.dark .bn-editor table th {
+  border-color: #4a4a4a !important;
+  background-color: var(--surface-subtle);
+}
+.dark .bn-editor table th,
+.dark .bn-editor table tr:first-child td,
+.dark .bn-editor table tr:first-child th {
+  background-color: var(--sidebar-selection);
+}
+
+/* Link styles in BlockNote editor */
+.bn-editor a {
+  color: var(--focused-content);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: rgba(232, 163, 0, 0.5);
+  cursor: pointer;
+}
+
+.chat-link {
+  color: var(--focused-content);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--focused-content) 50%, transparent);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.chat-link:hover {
+  text-decoration-color: color-mix(in srgb, var(--focused-content) 75%, transparent);
+}
+
+.bn-editor .workspace-interlink-token {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15em;
+  color: var(--focused-content);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.bn-block-content[data-content-type="slackMessage"].ProseMirror-selectednode > *,
+.ProseMirror-selectednode > .bn-block-content[data-content-type="slackMessage"] > * {
+  outline: none !important;
+}
+
+.slack-message-embed {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 0 -12px;
+  border-radius: 4px;
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  transition: background 0.1s;
+  color: var(--foreground);
+}
+
+.slack-message-embed:hover {
+  background: var(--block-highlight);
+}
+
+.slack-message-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.slack-message-avatar-placeholder {
+  background: var(--block-highlight);
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.slack-message-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.slack-message-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.slack-message-author {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--foreground);
+}
+
+.slack-message-time {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.slack-message-text {
+  font-size: 15px;
+  line-height: 1.46;
+  color: var(--foreground);
+  white-space: pre-wrap;
+}
+
+.slack-message-embed-open {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  text-decoration: underline;
+  opacity: 0;
+  transition: opacity 0.15s;
+  cursor: pointer;
+}
+
+.slack-message-embed:hover .slack-message-embed-open {
+  opacity: 1;
+}
+
+.slack-message-embed-open:hover {
+  color: var(--foreground);
+}
+
+.slack-mention-broadcast {
+  background: var(--palette-amber-light);
+  color: var(--foreground);
+  padding: 0 2px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.slack-mention-user {
+  color: #1264a3;
+  background: color-mix(in srgb, #1264a3 14%, transparent);
+  padding: 0 2px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.dark .slack-mention-user {
+  color: #4ea3d8;
+  background: color-mix(in srgb, #4ea3d8 18%, transparent);
+}
+
+.slack-channel-link,
+.slack-link {
+  color: #1264a3;
+}
+
+.dark .slack-channel-link,
+.dark .slack-link {
+  color: #4ea3d8;
+}
+
+.slack-code {
+  background: var(--block-highlight);
+  border: 1px solid var(--outline);
+  border-radius: 3px;
+  padding: 0 3px;
+  font-family: Monaco, Menlo, monospace;
+  font-size: 0.9em;
+  color: #e01e5a;
+}
+
+.dark .slack-code {
+  color: #ff6b9a;
+}
+
+.bn-editor .workspace-interlink-token-label {
+  text-decoration: underline;
+  text-decoration-color: rgba(232, 163, 0, 0.5);
+}
+
+.bn-editor .workspace-interlink-token-icon {
+  font-size: 0.72em;
+  opacity: 0.72;
+}
+
+@keyframes workspace-interlink-toolbar-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.workspace-interlink-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  max-width: min(520px, calc(100vw - 20px));
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--outline) 88%, transparent);
+  background: color-mix(in srgb, var(--editor) 94%, white 6%);
+  box-shadow:
+    0 14px 28px -16px rgba(0, 0, 0, 0.35),
+    0 6px 14px -10px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+  animation: workspace-interlink-toolbar-in 120ms ease-out;
+}
+
+.workspace-interlink-toolbar-button {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--outline) 42%, transparent);
+  background: transparent;
+  color: var(--foreground);
+  border-radius: 9px;
+  padding: 6px 11px;
+  font-size: 0.79rem;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+.workspace-interlink-toolbar-button:hover {
+  background-color: color-mix(in srgb, var(--foreground) 10%, transparent);
+  border-color: color-mix(in srgb, var(--outline) 88%, transparent);
+  transform: translateY(-1px);
+}
+
+.workspace-interlink-toolbar-button:active {
+  transform: translateY(0);
+}
+
+.workspace-interlink-toolbar-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--focused-content) 42%, transparent);
+  outline-offset: 1px;
+}
+
+.workspace-interlink-toolbar-icon {
+  font-size: 0.72rem;
+  opacity: 0.72;
+}
+
+.workspace-interlink-toolbar-remove {
+  color: #dc2626;
+}
+
+.workspace-interlink-toolbar-remove:hover {
+  background-color: color-mix(in srgb, #dc2626 12%, transparent);
+  border-color: color-mix(in srgb, #dc2626 30%, transparent);
+}
+
+.dark .workspace-interlink-toolbar {
+  background: color-mix(in srgb, var(--editor) 90%, black 10%);
+  border-color: color-mix(in srgb, var(--outline) 92%, transparent);
+  box-shadow:
+    0 16px 34px -18px rgba(0, 0, 0, 0.7),
+    0 8px 18px -12px rgba(0, 0, 0, 0.6);
+}
+
+.dark .workspace-interlink-toolbar-button:hover {
+  background-color: color-mix(in srgb, white 9%, transparent);
+  border-color: color-mix(in srgb, white 20%, transparent);
+}
+
+.dark .workspace-interlink-toolbar-remove {
+  color: #f87171;
+}
+
+.dark .workspace-interlink-toolbar-remove:hover {
+  background-color: color-mix(in srgb, #f87171 16%, transparent);
+  border-color: color-mix(in srgb, #f87171 35%, transparent);
+}
+
+/* Horizontal rule / divider styles */
+.bn-editor hr,
+.bn-editor [data-content-type] hr,
+[data-content-type='horizontalRule'] hr {
+  border-color: color-mix(in srgb, var(--muted-foreground) 30%, transparent) !important;
+}
+
+/* Custom scrollbar hiding utility */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Hide scrollbars when mouse is connected (macOS shows native scrollbars) */
+/* This targets all scrollable elements within the app */
+@media (pointer: fine) {
+  /* Global scrollbar hide for the app */
+  #root,
+  #root * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  #root::-webkit-scrollbar,
+  #root *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+}
+
+/* Thin themed scrollbar */
+.scrollbar-thin {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: color-mix(in srgb, var(--foreground) 30%, transparent) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 12px; /* Larger track to allow centering */
+  height: 12px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--foreground) 30%, transparent);
+  border-radius: 10px;
+  border: 4px solid transparent; /* Creates padding, centers the thumb */
+  background-clip: padding-box; /* Clips bg to inside the border */
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--foreground) 50%, transparent);
+}
+
+/* Persistent selection highlight - shown when editor loses focus */
+.persist-selection-highlight {
+  background-color: rgba(251, 191, 36, 0.15); /* yellow-400 */
+  border: 1px solid rgba(217, 149, 25, 0.4);
+  border-radius: 3px;
+  margin: 0 -1px;
+  padding: 0 1px;
+}
+
+.dark .persist-selection-highlight {
+  background-color: rgba(251, 191, 36, 0.12);
+  border-color: rgba(217, 149, 25, 0.35);
+}
+
+/* Canvas toolbar buttons (theme toggle, zoom reset, sidebar toggle) */
+.canvas-btn {
+  background: var(--palette-warm-gray);
+  color: var(--foreground);
+  border: 0.5px solid #bfbfbf;
+  box-shadow:
+    0 2px 4px 0 rgba(0, 0, 0, 0.05),
+    inset 0 0 12px 0 white;
+}
+
+.dark .canvas-btn {
+  border-color: #0f0f0f;
+  box-shadow:
+    0 2px 4px 0 rgba(0, 0, 0, 0.2),
+    inset 0 0 12px 0 rgba(255, 255, 255, 0.09);
+}
+
+/* Canvas add-node toolbar: glassy translucent pill + tools with hover/armed states */
+.canvas-toolbar-pill {
+  background: rgba(253, 252, 249, 0.75);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow:
+    0 1px 1px 0 rgba(60, 45, 20, 0.04),
+    0 10px 30px -10px rgba(60, 45, 20, 0.18),
+    inset 0 0 0 0.5px #E7DCCA;
+}
+
+.dark .canvas-toolbar-pill {
+  background: rgba(30, 28, 24, 0.45);
+  box-shadow:
+    0 2px 6px 0 rgba(0, 0, 0, 0.3),
+    0 12px 30px -10px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+}
+
+.canvas-tool-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  cursor: pointer;
+  color: var(--foreground);
+  transition:
+    transform 180ms cubic-bezier(0.34, 1.2, 0.64, 1),
+    background-color 180ms ease-out;
+  will-change: transform;
+}
+
+.canvas-tool-btn:hover {
+  background-color: var(--sidebar-selection);
+  transform: scale(1.1);
+}
+
+.canvas-tool-btn:hover > i {
+  transform: scale(1.15);
+  transition: transform 180ms cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.dark .canvas-tool-btn:hover {
+  background-color: var(--sidebar-selection);
+}
+
+.canvas-tool-btn:active {
+  background-color: rgba(232, 163, 0, 0.2);
+  transform: scale(0.92);
+  transition-duration: 80ms;
+}
+
+.canvas-tool-btn-armed,
+.canvas-tool-btn-armed:hover {
+  background-color: rgba(232, 163, 0, 0.12);
+}
+
+.dark .canvas-tool-btn-armed,
+.dark .canvas-tool-btn-armed:hover {
+  background-color: rgba(232, 163, 0, 0.15);
+}
+
+.canvas-toolbar-sep {
+  width: 1px;
+  height: 22px;
+  margin: 0 8px;
+  background-color: color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+/* Ghost cursor that follows the mouse while a tool is armed */
+.canvas-tool-ghost {
+  background-color: color-mix(in srgb, #c5d9ba 70%, transparent);
+  box-shadow: 0 4px 12px -4px rgba(60, 90, 50, 0.3);
+  transition: opacity 120ms ease-out;
+}
+
+/* Focus mode overlay - smooth fade+scale animations */
+.focus-mode-overlay {
+  transition:
+    opacity 300ms ease-out,
+    transform 300ms ease-out;
+}
+
+.focus-mode-overlay.entering {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.focus-mode-overlay.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.focus-mode-overlay.exiting {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* Hide canvas during focus mode */
+.canvas-hidden-for-focus {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* BlockNote cards: warm cream stroke + soft warm drop shadow */
+.node-card-blocknote {
+  border-color: var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+/* Selected node card — uniform 1px gold border around the whole card */
+.node-card-selected {
+  border-color: var(--card-border-accent) !important;
+}
+
+.node-card-active-write-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+  transition: opacity 260ms ease-out;
+}
+
+.node-card-active-write-overlay-active {
+  opacity: 1;
+}
+
+.node-card-active-write-overlay-inner {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--node-write-pulse-border-width, 1.4px) solid color-mix(in srgb, var(--focused-content) 68%, white 32%);
+  box-shadow:
+    0 0 0 0 color-mix(in srgb, var(--focused-content) 0%, transparent),
+    0 0 0 0 color-mix(in srgb, var(--focused-content) 0%, transparent);
+  opacity: 0.22;
+  pointer-events: none;
+  will-change: opacity, box-shadow;
+  animation: node-card-active-write-pulse 2.1s ease-in-out infinite;
+}
+
+@keyframes node-card-active-write-pulse {
+  0%,
+  100% {
+    opacity: 0.18;
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--focused-content) 0%, transparent),
+      0 0 0 0 color-mix(in srgb, var(--focused-content) 0%, transparent);
+  }
+
+  50% {
+    opacity: 0.5;
+    box-shadow:
+      0 0 0 var(--node-write-pulse-ring-spread, 2px) color-mix(in srgb, var(--focused-content) 6%, transparent),
+      0 0 var(--node-write-pulse-glow-blur, 12px) var(--node-write-pulse-glow-spread, 1px)
+        color-mix(in srgb, var(--focused-content) 12%, transparent);
+  }
+}

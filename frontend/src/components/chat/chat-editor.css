@@ -1,0 +1,117 @@
+#chat-input-form {
+  background: transparent;
+  position: relative;
+}
+
+/* Position the ResizeHandle bar at the form's top edge and make it always visible */
+#chat-input-form > .group {
+  align-items: center;
+}
+
+#chat-input-form > .group > div {
+  height: 2px !important;
+  opacity: 1 !important;
+  background-color: var(--sidebar-edge-border) !important;
+}
+
+#chat-input-form > .group:hover > div {
+  height: 4px !important;
+}
+
+
+.chat-editor .ProseMirror {
+  width: 100%;
+  background: transparent;
+  outline: none;
+  color: var(--chat-text);
+  font-weight: 500;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.chat-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--muted-foreground);
+  pointer-events: none;
+  float: left;
+  height: 0;
+  content: attr(data-placeholder);
+}
+
+/* Plus and mic: transparent by default, warm cream chip only on hover */
+.chat-toolbar-plus,
+.chat-toolbar-mic {
+  background: transparent;
+  border: 0.5px solid transparent;
+  color: var(--foreground);
+}
+
+.chat-toolbar-mic {
+  border-radius: 50%;
+}
+
+.chat-toolbar-plus:hover,
+.chat-toolbar-mic:hover {
+  background: #f4f0e9;
+  border-color: #f3ede3;
+}
+
+/* Outline variant (default state): muted ink */
+.chat-toolbar-plus > .fa-regular,
+.chat-toolbar-mic > .fa-regular {
+  color: var(--palette-ink-50);
+}
+
+/* Solid variant (revealed on hover): dark gradient */
+.chat-toolbar-plus > .fa-solid,
+.chat-toolbar-mic > .fa-solid {
+  background: linear-gradient(to bottom, #4b4b4b 0%, #1d1d1d 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Disabled: keep transparent, show muted outline icon, don't flip on hover */
+.chat-toolbar-plus:disabled,
+.chat-toolbar-mic:disabled,
+.chat-toolbar-plus:disabled:hover,
+.chat-toolbar-mic:disabled:hover {
+  opacity: 1;
+  background: transparent;
+  border-color: transparent;
+}
+
+.chat-toolbar-submit {
+  background: var(--chat-submit-bg);
+  border: 1px solid var(--chat-submit-border);
+  border-radius: 50%;
+  box-shadow: var(--chat-submit-shadow);
+  color: white;
+}
+
+:is(.dark, .dark *) .chat-toolbar-submit {
+  color: #1d1d1d;
+}
+
+.chat-toolbar-submit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: var(--chat-submit-inner-shadow);
+  pointer-events: none;
+}
+
+.chat-editor .mention-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  margin: 0 0.125rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--outline);
+  background: var(--block-highlight);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: default;
+}

@@ -1,0 +1,105 @@
+{
+  "name": "shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./workspace-client": {
+      "types": "./dist/workspace/client.d.ts",
+      "default": "./dist/workspace/client.js"
+    },
+    "./workspace-provider": {
+      "types": "./dist/workspace/socketio-provider.d.ts",
+      "default": "./dist/workspace/socketio-provider.js"
+    },
+    "./note-provider": {
+      "types": "./dist/workspace/note-socketio-provider.d.ts",
+      "default": "./dist/workspace/note-socketio-provider.js"
+    },
+    "./workspace-content-store": {
+      "types": "./dist/workspace/workspace-content-store.d.ts",
+      "default": "./dist/workspace/workspace-content-store.js"
+    },
+    "./note-doc": {
+      "types": "./dist/workspace/note-doc.d.ts",
+      "default": "./dist/workspace/note-doc.js"
+    },
+    "./workspace-sync-types": {
+      "types": "./dist/workspace/workspace-sync-types.d.ts",
+      "default": "./dist/workspace/workspace-sync-types.js"
+    },
+    "./document-share": {
+      "types": "./dist/document-share.d.ts",
+      "default": "./dist/document-share.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./constants": {
+      "types": "./dist/constants.d.ts",
+      "default": "./dist/constants.js"
+    },
+    "./path-mapper": {
+      "types": "./dist/path-mapper.d.ts",
+      "default": "./dist/path-mapper.js"
+    },
+    "./workspace-interlink": {
+      "types": "./dist/workspace-interlink.d.ts",
+      "default": "./dist/workspace-interlink.js"
+    },
+    "./canvas-tree": {
+      "types": "./dist/workspace/canvas-tree.d.ts",
+      "default": "./dist/workspace/canvas-tree.js"
+    },
+    "./skills": {
+      "types": "./dist/skills/index.d.ts",
+      "default": "./dist/skills/index.js"
+    },
+    "./llm-config": {
+      "types": "./dist/llm-config.d.ts",
+      "default": "./dist/llm-config.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@blocknote/core": "^0.46.0",
+    "@blocknote/server-util": "^0.46.0",
+    "fflate": "^0.8.2",
+    "image-size": "^2.0.2",
+    "lib0": "^0.2.114",
+    "pngjs": "^7.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "socket.io-client": "^4.8.1",
+    "unified": "^11.0.5",
+    "valtio": "2.2.0",
+    "valtio-y": "https://github.com/Ryner01/valtio-y/releases/download/v1.1.4/valtio-y-1.1.4.tgz",
+    "y-protocols": "^1.0.6",
+    "yaml": "^2.8.1",
+    "yjs": "^13.6.27",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "@types/pngjs": "^6.0.5",
+    "typescript": "~5.7.3",
+    "vitest": "^4.0.13",
+    "ws": "^8.18.0"
+  },
+  "peerDependencies": {
+    "@xyflow/react": "^12.8.5"
+  }
+}

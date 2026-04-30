@@ -1,0 +1,38 @@
+name: Yjs Server Tests
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'shared/**'
+      - 'yjs-server/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'patches/**'
+      - '.github/workflows/test-yjs-server.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'shared/**'
+      - 'yjs-server/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'patches/**'
+      - '.github/workflows/test-yjs-server.yml'
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm', cache-dependency-path: 'pnpm-lock.yaml' }
+
+      - run: pnpm install --frozen-lockfile --filter kanwas-yjs-server...
+      - run: pnpm --filter shared build
+      - run: pnpm --filter kanwas-yjs-server test
+      - run: pnpm --filter kanwas-yjs-server build

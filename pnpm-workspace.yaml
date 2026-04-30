@@ -1,0 +1,8 @@
+packages:
+  - backend
+  - frontend
+  - shared
+  - execenv
+  - yjs-server
+  - cli
+  - packages/*
