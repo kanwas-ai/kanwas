@@ -44,6 +44,20 @@ const OPENAI_GENERATION_OPTIONS = {
   instructions: 'Follow the system messages provided in the conversation.',
 } as const
 
+/**
+ * Returns true when the baseURL points to a local/third-party OpenAI-compatible
+ * server (e.g. LM Studio, Ollama, llama.cpp) rather than api.openai.com.
+ */
+function isCompatibilityMode(baseURL?: string): boolean {
+  if (!baseURL) return false
+  try {
+    const url = new URL(baseURL)
+    return url.hostname !== 'api.openai.com'
+  } catch {
+    return false
+  }
+}
+
 export function createOpenAIProvider(
   apiKey: string,
   overrides: ProviderOverrideOptions = {},
@@ -54,6 +68,7 @@ export function createOpenAIProvider(
   const reasoningEffortOverride = normalizeOpenAIReasoningEffort(overrides.reasoningEffort)
   const serviceTierOverride = normalizeOpenAIServiceTier(overrides.serviceTier)
   const modelTiers = resolveModelTiers(OPENAI_DEFAULT_MODEL_TIERS, modelOverride)
+  const compatMode = isCompatibilityMode(baseURL)
 
   const customFetch = runtimeOptions.logger ? createOpenAILoggingFetch(runtimeOptions.logger) : undefined
 
@@ -67,10 +82,19 @@ export function createOpenAIProvider(
     name: 'openai',
 
     createModel(modelId: string) {
-      return openai.responses(modelId)
+      // OpenAI Responses API is only available on api.openai.com.
+      // For local/compatible servers (LM Studio, Ollama, etc.) use the
+      // standard Chat Completions endpoint instead.
+      return compatMode ? openai.chat(modelId) : openai.responses(modelId)
     },
 
     generationOptions(input: ProviderGenerationOptionsInput): AgentProviderCallOptions {
+      // Reasoning-effort and extended generation options are OpenAI-only.
+      // Skip them in compatibility mode to avoid 400 errors from local servers.
+      if (compatMode) {
+        return {}
+      }
+
       const flowHint = input.flowHint
       if (flowHint === 'utility') {
         return {
@@ -137,8 +161,8 @@ export function createOpenAIProvider(
       return result
     },
 
-    supportsThinking: true,
-    supportsCaching: true,
+    supportsThinking: !compatMode,
+    supportsCaching: !compatMode,
     supportsNativeTools: true,
 
     modelTiers,
