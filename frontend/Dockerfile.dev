@@ -13,8 +13,8 @@ COPY shared/package.json ./shared/
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
 
-# Install frontend + its workspace deps (shared, backend) using the frozen lockfile
-RUN HUSKY=0 pnpm install --frozen-lockfile --filter frontend...
+# Install frontend + its workspace deps (shared, backend)
+RUN HUSKY=0 pnpm install --no-frozen-lockfile --network-concurrency=1 --fetch-timeout=900000 --filter frontend...
 
 # Build shared so Vite resolves `shared` imports to the dist bundle at runtime
 COPY shared ./shared

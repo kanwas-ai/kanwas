@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "(tsc -b 2>&1 | grep -v '../backend/' || true) && vite build && cp public/favicon.png dist/assets/",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json 2>&1 | grep -v '../backend/' || true",
+    "build": "node ./scripts/tsc-filter.mjs build && vite build && node ./scripts/copy-favicon.mjs",
+    "typecheck": "node ./scripts/tsc-filter.mjs typecheck",
     "typecheck:all": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest run",
     "test:watch": "vitest",

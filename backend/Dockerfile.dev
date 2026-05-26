@@ -13,8 +13,8 @@ COPY patches/ ./patches/
 COPY shared/package.json ./shared/
 COPY backend/package.json ./backend/
 
-# Install backend + its workspace deps (shared) using the frozen lockfile
-RUN HUSKY=0 pnpm install --frozen-lockfile --filter backend...
+# Install backend + its workspace deps (shared)
+RUN HUSKY=0 pnpm install --no-frozen-lockfile --network-concurrency=1 --fetch-timeout=900000 --filter backend...
 
 # Build shared so backend can import from shared/dist at runtime
 COPY shared ./shared

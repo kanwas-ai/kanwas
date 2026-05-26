@@ -12,8 +12,8 @@ COPY patches/ ./patches/
 COPY shared/package.json ./shared/
 COPY yjs-server/package.json ./yjs-server/
 
-# Install yjs-server + its workspace deps (shared) using the frozen lockfile
-RUN HUSKY=0 pnpm install --frozen-lockfile --filter kanwas-yjs-server...
+# Install yjs-server + its workspace deps (shared)
+RUN HUSKY=0 pnpm install --no-frozen-lockfile --network-concurrency=1 --fetch-timeout=900000 --filter kanwas-yjs-server...
 
 # Build shared so yjs-server can import from shared/dist at runtime (tsx resolves exports map)
 COPY shared ./shared
