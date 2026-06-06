@@ -40,6 +40,8 @@ import {
 } from './workspacePageState'
 import type { Workspace } from '@/api/client'
 import { getAgentCanvasFollowRequestKey, type AgentCanvasFollowRequest } from '@/components/chat/agentFileFollow'
+import { useAddBlockNoteNodeFromImport } from '@/components/canvas/hooks'
+import { readGBrainPage } from '@/api/gbrain'
 
 const RECONNECTING_INDICATOR_DELAY_MS = 20_000
 
@@ -77,6 +79,7 @@ function WorkspaceContent({ routeCanvasPath, workspace }: { routeCanvasPath: str
   const navigate = useNavigate()
   const location = useLocation()
   const { structureFingerprint, sidebarRoot } = useWorkspaceStructure(store)
+  const addBlockNoteNodeFromImport = useAddBlockNoteNodeFromImport()
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
@@ -541,6 +544,38 @@ function WorkspaceContent({ routeCanvasPath, workspace }: { routeCanvasPath: str
     [handleCanvasSelect, handleNodeFocus]
   )
 
+  // Import a GBrain markdown page into the active canvas as a BlockNote node.
+  const handleGBrainPageImport = useCallback(
+    async (pagePath: string) => {
+      const canvasId = activeCanvasIdRef.current
+      if (!canvasId) {
+        showToast('No active canvas selected', 'error')
+        return
+      }
+
+      try {
+        const page = await readGBrainPage(workspaceId, pagePath)
+        const importedMarkdown = `> Imported from GBrain: \`${page.path}\`\n\n${page.markdown}`
+        const nodeId = addBlockNoteNodeFromImport({
+          content: importedMarkdown,
+          format: 'markdown',
+          documentName: page.title,
+          canvasId,
+        })
+
+        if (!nodeId) {
+          return
+        }
+
+        showToast(`Imported ${page.title} from GBrain`, 'success')
+        handleNodeFocus(nodeId, canvasId)
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'Failed to import GBrain page', 'error')
+      }
+    },
+    [addBlockNoteNodeFromImport, handleNodeFocus, workspaceId]
+  )
+
   const handleWorkspaceLinkNavigate = useCallback(
     (href: string) => {
       const rootCanvas = rootRef.current
@@ -819,6 +854,8 @@ function WorkspaceContent({ routeCanvasPath, workspace }: { routeCanvasPath: str
         contentStore={contentStore}
         onSelect={handleSearchSelect}
         activeCanvasId={activeCanvasId}
+        workspaceId={workspaceId}
+        onImportGBrainPage={handleGBrainPageImport}
       />
     </div>
   )

@@ -25,6 +25,7 @@ const TasksController = () => import('#controllers/tasks_controller')
 const WorkspaceSuggestedTasksController = () => import('#controllers/workspace_suggested_tasks_controller')
 const UserConfigController = () => import('#controllers/user_config_controller')
 const SlackMessageController = () => import('#controllers/slack_message_controller')
+const GBrainController = () => import('#controllers/gbrain_controller')
 
 // CLI auth (code + poll are public, authorize requires auth)
 router
@@ -114,6 +115,10 @@ router
 
         // Slack message fetch endpoint - resolves permalink to message data via Composio
         router.post('/workspaces/:id/slack/message', [SlackMessageController, 'fetch']).as('slack.message.fetch')
+
+        // GBrain read-only endpoints - search and read markdown pages for canvas import
+        router.get('/workspaces/:id/gbrain/search', [GBrainController, 'search']).as('gbrain.search')
+        router.get('/workspaces/:id/gbrain/page', [GBrainController, 'show']).as('gbrain.show')
 
         router
           .post('/workspaces/:id/connections/initiate', [ConnectionsController, 'initiate'])

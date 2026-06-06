@@ -171,6 +171,14 @@ type WorkspacesIdSlackMessagePost = {
   request: MakeTuyauRequest<InferInput<typeof import('../app/validators/slack_message.ts')['fetchSlackMessageValidator']>>
   response: MakeNonSerializedTuyauResponse<import('../app/controllers/slack_message_controller.ts').default['fetch'], true>
 }
+type WorkspacesIdGbrainSearchGetHead = {
+  request: MakeTuyauRequest<InferInput<typeof import('../app/validators/gbrain.ts')['searchGBrainValidator']>>
+  response: MakeNonSerializedTuyauResponse<import('../app/controllers/gbrain_controller.ts').default['search'], true>
+}
+type WorkspacesIdGbrainPageGetHead = {
+  request: MakeTuyauRequest<InferInput<typeof import('../app/validators/gbrain.ts')['readGBrainPageValidator']>>
+  response: MakeNonSerializedTuyauResponse<import('../app/controllers/gbrain_controller.ts').default['show'], true>
+}
 type WorkspacesIdConnectionsInitiatePost = {
   request: MakeTuyauRequest<InferInput<typeof import('../app/validators/connection.ts')['initiateConnectionValidator']>>
   response: MakeNonSerializedTuyauResponse<import('../app/controllers/connections_controller.ts').default['initiate'], true>
@@ -516,6 +524,20 @@ export interface ApiDefinition {
           '$url': {
           };
           '$post': WorkspacesIdSlackMessagePost;
+        };
+      };
+      'gbrain': {
+        'search': {
+          '$url': {
+          };
+          '$get': WorkspacesIdGbrainSearchGetHead;
+          '$head': WorkspacesIdGbrainSearchGetHead;
+        };
+        'page': {
+          '$url': {
+          };
+          '$get': WorkspacesIdGbrainPageGetHead;
+          '$head': WorkspacesIdGbrainPageGetHead;
         };
       };
       'nodes': {
@@ -988,6 +1010,20 @@ const routes = [
     path: '/workspaces/:id/slack/message',
     method: ["POST"],
     types: {} as WorkspacesIdSlackMessagePost,
+  },
+  {
+    params: ["id"],
+    name: 'gbrain.search',
+    path: '/workspaces/:id/gbrain/search',
+    method: ["GET","HEAD"],
+    types: {} as WorkspacesIdGbrainSearchGetHead,
+  },
+  {
+    params: ["id"],
+    name: 'gbrain.show',
+    path: '/workspaces/:id/gbrain/page',
+    method: ["GET","HEAD"],
+    types: {} as WorkspacesIdGbrainPageGetHead,
   },
   {
     params: ["id"],

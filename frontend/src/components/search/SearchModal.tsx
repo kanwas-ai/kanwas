@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useWorkspaceSearch, type SearchResult } from '@/hooks/useWorkspaceSearch'
+import { searchGBrainPages, type GBrainSearchResult } from '@/api/gbrain'
 import type { CanvasItem, WorkspaceContentStore } from 'shared'
 import * as Y from 'yjs'
 
@@ -11,7 +12,11 @@ interface SearchModalProps {
   contentStore: WorkspaceContentStore | null
   onSelect: (result: SearchResult, query: string) => void
   activeCanvasId?: string | null
+  workspaceId?: string
+  onImportGBrainPage?: (path: string) => Promise<void>
 }
+
+type SearchEntry = { kind: 'local'; result: SearchResult } | { kind: 'gbrain'; result: GBrainSearchResult }
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -38,9 +43,22 @@ function SkeletonItem({ showContent = false }: { showContent?: boolean }) {
   )
 }
 
-export function SearchModal({ isOpen, onClose, root, yDoc, contentStore, onSelect, activeCanvasId }: SearchModalProps) {
+export function SearchModal({
+  isOpen,
+  onClose,
+  root,
+  yDoc,
+  contentStore,
+  onSelect,
+  activeCanvasId,
+  workspaceId,
+  onImportGBrainPage,
+}: SearchModalProps) {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [gbrainResults, setGBrainResults] = useState<GBrainSearchResult[]>([])
+  const [isGBrainSearching, setIsGBrainSearching] = useState(false)
+  const [gbrainError, setGBrainError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -70,6 +88,51 @@ export function SearchModal({ isOpen, onClose, root, yDoc, contentStore, onSelec
     }
   }, [results, debouncedQuery])
 
+  useEffect(() => {
+    const trimmedQuery = debouncedQuery.trim()
+    if (!isOpen || !workspaceId || !trimmedQuery) {
+      setGBrainResults([])
+      setGBrainError(null)
+      setIsGBrainSearching(false)
+      return
+    }
+
+    let cancelled = false
+    setIsGBrainSearching(true)
+    setGBrainError(null)
+
+    searchGBrainPages(workspaceId, trimmedQuery)
+      .then((nextResults) => {
+        if (!cancelled) {
+          setGBrainResults(nextResults)
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setGBrainResults([])
+          setGBrainError(error instanceof Error ? error.message : 'Could not search GBrain')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsGBrainSearching(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [debouncedQuery, isOpen, workspaceId])
+
+  const displayEntries = useMemo<SearchEntry[]>(() => {
+    const localEntries: SearchEntry[] = displayResults.map((result) => ({ kind: 'local', result }))
+    const gbrainEntries: SearchEntry[] = debouncedQuery.trim()
+      ? gbrainResults.map((result) => ({ kind: 'gbrain', result }))
+      : []
+
+    return [...localEntries, ...gbrainEntries]
+  }, [debouncedQuery, displayResults, gbrainResults])
+
   // Lookup: result id -> index in flat displayResults list
   const indexById = useMemo(() => {
     const map = new Map<string, number>()
@@ -81,6 +144,10 @@ export function SearchModal({ isOpen, onClose, root, yDoc, contentStore, onSelec
   useEffect(() => {
     setSelectedIndex(0)
   }, [debouncedQuery])
+
+  useEffect(() => {
+    setSelectedIndex((current) => Math.min(current, Math.max(displayEntries.length - 1, 0)))
+  }, [displayEntries.length])
 
   // Focus input when modal opens
   useEffect(() => {
@@ -94,11 +161,11 @@ export function SearchModal({ isOpen, onClose, root, yDoc, contentStore, onSelec
 
   // Scroll selected item into view
   useEffect(() => {
-    if (listRef.current && displayResults.length > 0) {
+    if (listRef.current && displayEntries.length > 0) {
       const selectedElement = listRef.current.querySelector('[data-selected="true"]') as HTMLElement
       selectedElement?.scrollIntoView({ block: 'nearest' })
     }
-  }, [selectedIndex, displayResults.length])
+  }, [selectedIndex, displayEntries.length])
 
   const handleSelect = useCallback(
     (result: SearchResult) => {
@@ -108,25 +175,49 @@ export function SearchModal({ isOpen, onClose, root, yDoc, contentStore, onSelec
     [onSelect, onClose, query]
   )
 
+  const handleGBrainSelect = useCallback(
+    async (result: GBrainSearchResult) => {
+      if (!onImportGBrainPage) {
+        return
+      }
+
+      await onImportGBrainPage(result.path)
+      onClose()
+    },
+    [onImportGBrainPage, onClose]
+  )
+
+  const handleEntrySelect = useCallback(
+    (entry: SearchEntry) => {
+      if (entry.kind === 'local') {
+        handleSelect(entry.result)
+        return
+      }
+
+      void handleGBrainSelect(entry.result)
+    },
+    [handleGBrainSelect, handleSelect]
+  )
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault()
-          if (displayResults.length > 0) {
-            setSelectedIndex((prev) => Math.min(prev + 1, displayResults.length - 1))
+          if (displayEntries.length > 0) {
+            setSelectedIndex((prev) => Math.min(prev + 1, displayEntries.length - 1))
           }
           break
         case 'ArrowUp':
           e.preventDefault()
-          if (displayResults.length > 0) {
+          if (displayEntries.length > 0) {
             setSelectedIndex((prev) => Math.max(prev - 1, 0))
           }
           break
         case 'Enter':
           e.preventDefault()
-          if (displayResults.length > 0 && displayResults[selectedIndex]) {
-            handleSelect(displayResults[selectedIndex])
+          if (displayEntries.length > 0 && displayEntries[selectedIndex]) {
+            handleEntrySelect(displayEntries[selectedIndex])
           }
           break
         case 'Escape':
@@ -135,7 +226,7 @@ export function SearchModal({ isOpen, onClose, root, yDoc, contentStore, onSelec
           break
       }
     },
-    [displayResults, selectedIndex, handleSelect, onClose]
+    [displayEntries, selectedIndex, handleEntrySelect, onClose]
   )
 
   if (!isOpen) return null
@@ -209,7 +300,7 @@ export function SearchModal({ isOpen, onClose, root, yDoc, contentStore, onSelec
               <SkeletonItem showContent />
               <SkeletonItem />
             </div>
-          ) : results.length === 0 ? (
+          ) : displayEntries.length === 0 && !isGBrainSearching ? (
             <div className="h-full flex items-center justify-center text-foreground/30 text-sm py-8">
               {debouncedQuery ? 'No results found' : 'Type to search...'}
             </div>
@@ -281,6 +372,35 @@ export function SearchModal({ isOpen, onClose, root, yDoc, contentStore, onSelec
                   })}
                 </>
               )}
+              {(gbrainResults.length > 0 || isGBrainSearching || gbrainError) && (
+                <>
+                  <div
+                    className={`px-3 py-1 text-[11px] text-foreground-muted/70 font-medium ${displayResults.length > 0 ? 'mt-1.5 border-t border-outline/50 pt-2' : ''}`}
+                  >
+                    GBrain
+                  </div>
+                  {gbrainResults.map((result, gbrainIndex) => {
+                    const index = displayResults.length + gbrainIndex
+                    return (
+                      <GBrainResultItem
+                        key={result.path}
+                        result={result}
+                        query={debouncedQuery}
+                        isSelected={index === selectedIndex}
+                        onClick={() => void handleGBrainSelect(result)}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                      />
+                    )
+                  })}
+                  {isGBrainSearching && (
+                    <>
+                      <SkeletonItem showContent />
+                      <SkeletonItem showContent />
+                    </>
+                  )}
+                  {gbrainError && <div className="px-3 py-2 text-[12px] text-red-500/80">{gbrainError}</div>}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -299,6 +419,61 @@ export function SearchModal({ isOpen, onClose, root, yDoc, contentStore, onSelec
         </div>
       </div>
     </div>
+  )
+}
+
+function GBrainResultItem({
+  result,
+  isSelected,
+  onClick,
+  onMouseEnter,
+}: {
+  result: GBrainSearchResult
+  query?: string
+  isSelected: boolean
+  onClick: () => void
+  onMouseEnter: () => void
+}) {
+  return (
+    <button
+      data-selected={isSelected}
+      className={`w-full px-3 py-1.5 flex items-start gap-2.5 text-left rounded-md mx-1 transition-colors duration-75 ${
+        isSelected ? 'bg-foreground/[0.04]' : 'hover:bg-foreground/[0.02]'
+      }`}
+      style={{ width: 'calc(100% - 8px)' }}
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+    >
+      <div
+        className={`mt-0.5 flex-shrink-0 transition-colors duration-75 ${isSelected ? 'text-foreground/70' : 'text-foreground/40'}`}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+          />
+        </svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 text-[14px]">
+          <span
+            className={`truncate transition-colors duration-75 ${isSelected ? 'text-foreground' : 'text-foreground/80'}`}
+          >
+            {result.title}
+          </span>
+          <span className="text-foreground/30 flex-shrink-0">—</span>
+          <span className="text-foreground/40 truncate text-[13px]">{result.path}</span>
+          <span className="flex-shrink-0 px-1.5 py-0.5 text-[12px] bg-foreground/5 text-foreground/50 rounded font-medium ml-auto">
+            Import
+          </span>
+        </div>
+        {result.snippet && (
+          <div className="text-[13px] text-foreground/40 mt-0.5 line-clamp-2 leading-relaxed">{result.snippet}</div>
+        )}
+      </div>
+    </button>
   )
 }
 
