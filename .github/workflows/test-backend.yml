@@ -1,0 +1,60 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'backend/**'
+      - 'shared/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'patches/**'
+      - '.github/workflows/test-backend.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'backend/**'
+      - 'shared/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'patches/**'
+      - '.github/workflows/test-backend.yml'
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: kanwas
+          POSTGRES_PASSWORD: kanwas
+          POSTGRES_DB: kanwas_test
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        ports: ['5432:5432']
+      redis:
+        image: redis:8-alpine
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm', cache-dependency-path: 'pnpm-lock.yaml' }
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter shared build
+      - run: cp backend/.env.test backend/.env
+
+      - name: TypeScript
+        run: pnpm --filter backend exec tsc --noEmit
+
+      - name: Tests
+        run: pnpm --filter backend test
+        env:
+          HOST: 0.0.0.0
+
+      - name: Build
+        run: pnpm --filter backend build

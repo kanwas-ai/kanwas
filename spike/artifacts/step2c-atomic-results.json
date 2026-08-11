@@ -1,0 +1,22 @@
+[
+  {
+    "name": "setup: edge attached to note node",
+    "pass": true,
+    "detail": "edge exp→readme applied=true"
+  },
+  {
+    "name": "delete+recreate 300ms → id/edge/position survive, content updated",
+    "pass": true,
+    "detail": "id=true pos=true edge=true content=true single=true"
+  },
+  {
+    "name": "delete+recreate 900ms → id/edge/position survive, content updated",
+    "pass": true,
+    "detail": "id=true pos=true edge=true content=true single=true"
+  },
+  {
+    "name": "write-tmp+rename → id/edge/position survive, content updated",
+    "pass": true,
+    "detail": "id=true pos=true edge=true content=true single=true"
+  }
+]

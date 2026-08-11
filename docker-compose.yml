@@ -1,0 +1,153 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: kanwas-postgres
+    restart: unless-stopped
+    profiles:
+      - postgres
+      - infra
+      - test
+      - backend
+      - frontend
+      - app
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: kanwas
+      POSTGRES_PASSWORD: kanwas
+      POSTGRES_DB: kanwas
+    volumes:
+      - kanwas_postgres_data:/var/lib/postgresql/data
+      - ./dev/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U kanwas']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kanwas-network
+
+  redis:
+    image: redis:8-alpine
+    container_name: kanwas-redis
+    restart: unless-stopped
+    profiles:
+      - redis
+      - infra
+      - test
+      - backend
+      - frontend
+      - app
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kanwas-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile.dev
+    container_name: kanwas-backend
+    restart: unless-stopped
+    profiles:
+      - backend
+      - app
+      - frontend
+    ports:
+      - '3333:3333'
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=development
+      - HOST=0.0.0.0
+    extra_hosts:
+      - 'localhost:host-gateway'
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+        required: false
+    networks:
+      - kanwas-network
+
+  yjs-server:
+    build:
+      context: .
+      dockerfile: ./yjs-server/Dockerfile.dev
+    container_name: kanwas-yjs-server
+    restart: unless-stopped
+    profiles:
+      - yjs-server
+      - app
+      - test
+      - frontend
+    ports:
+      - '1999:1999'
+    env_file:
+      - ./yjs-server/.env
+    extra_hosts:
+      - 'localhost:host-gateway'
+    volumes:
+      - yjs_server_data:/data/yjs-server
+    depends_on:
+      backend:
+        condition: service_started
+        required: false
+    networks:
+      - kanwas-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile.dev
+    container_name: kanwas-frontend
+    restart: unless-stopped
+    profiles:
+      - frontend
+      - app
+    stdin_open: true
+    ports:
+      - '5173:5173'
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      backend:
+        condition: service_started
+        required: false
+      yjs-server:
+        condition: service_started
+        required: false
+    networks:
+      - kanwas-network
+
+  execenv:
+    build:
+      context: .
+      dockerfile: ./execenv/Dockerfile
+    container_name: kanwas-execenv
+    profiles:
+      - testing # Only start with: docker-compose --profile testing up execenv
+    environment:
+      - WORKSPACE_ID=${EXECENV_WORKSPACE_ID:-test-workspace}
+      - YJS_SERVER_HOST=${EXECENV_YJS_SERVER_HOST:-yjs-server:1999}
+      - WORKSPACE_PATH=/workspace
+    depends_on:
+      yjs-server:
+        condition: service_started
+    networks:
+      - kanwas-network
+
+volumes:
+  kanwas_postgres_data:
+  yjs_server_data:
+
+networks:
+  kanwas-network:
+    driver: bridge

@@ -1,0 +1,4 @@
+.adonisjs
+build
+node_modules
+resources/admin/assets

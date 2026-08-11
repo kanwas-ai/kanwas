@@ -1,0 +1,101 @@
+name: Deploy Yjs Server
+
+on:
+  workflow_run:
+    workflows: ['Yjs Server Tests']
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment'
+        type: choice
+        default: 'staging'
+        options: [staging, production, seo]
+
+concurrency:
+  group: deploy-yjs-server-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build image
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions: { contents: read, packages: write }
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/yjs-server
+          tags: |
+            type=sha,prefix=
+            type=raw,value=${{ github.event.inputs.environment == 'production' && 'production' || 'staging' }}
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./yjs-server/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - run: echo "✓ Pushed ${{ steps.meta.outputs.tags }}"
+
+  deploy-staging:
+    name: Deploy → Staging
+    needs: build
+    if: github.event_name == 'workflow_run' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - run: npm install -g @railway/cli
+      - name: Deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+        run: |
+          echo "🚀 Deploying Yjs server to staging..."
+          railway redeploy --service yjs-server --yes
+          echo "✓ Deploy triggered"
+
+  deploy-production:
+    name: Deploy → Production
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - run: npm install -g @railway/cli
+      - name: Deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "🚀 Deploying Yjs server to production..."
+          railway redeploy --service yjs-server --yes
+          echo "✓ Deploy triggered"
+
+  deploy-seo:
+    name: Deploy → SEO
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'seo'
+    runs-on: ubuntu-latest
+    environment: seo
+
+    steps:
+      - run: npm install -g @railway/cli
+      - name: Deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_SEO }}
+        run: |
+          echo "🚀 Deploying Yjs server to SEO..."
+          railway redeploy --service yjs-server --yes
+          echo "✓ Deploy triggered"

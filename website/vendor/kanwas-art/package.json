@@ -1,0 +1,21 @@
+{
+  "name": "kanwas-art",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./lib/index.js",
+    "./react": "./lib/react.jsx"
+  },
+  "main": "./lib/index.js",
+  "scripts": {
+    "start": "node src/studio-server.js"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}

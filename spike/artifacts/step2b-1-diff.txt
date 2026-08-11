@@ -1,0 +1,30 @@
+--- /Users/johancutych/Documents/kanwas/spike/test-folder/expedition-notes.md	2026-07-02 18:05:38
++++ /var/folders/0f/nxm52c6x1ks7p3rmqy2d7lg00000gn/T/diffclass-ClDD8K/flushed.md	2026-07-03 12:09:18
+@@ -4,10 +4,10 @@
+ 
+ ## Snapshot
+ 
+-- Location: North ridge relay station
+-- Weather: Cold wind, clear visibility, unstable afternoon clouds
+-- Primary goal: Catalog the station contents before transport
+-- Secondary goal: Document anything that looks custom, improvised, or dangerous
++* Location: North ridge relay station
++* Weather: Cold wind, clear visibility, unstable afternoon clouds
++* Primary goal: Catalog the station contents before transport
++* Secondary goal: Document anything that looks custom, improvised, or dangerous
+ 
+ ## Immediate Actions
+ 
+@@ -31,9 +31,9 @@
+ 
+ ### Unresolved Questions
+ 
+-- Why was the repeater firmware rebuilt locally?
+-- Who replaced the west-facing sensor cable with marine-grade wiring?
+-- Why does the checklist mention a shutdown drill that is not present in the digital logs?
++* Why was the repeater firmware rebuilt locally?
++* Who replaced the west-facing sensor cable with marine-grade wiring?
++* Why does the checklist mention a shutdown drill that is not present in the digital logs?
+ 
+ ### Working Theory
+ 

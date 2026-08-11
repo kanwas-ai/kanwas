@@ -1,0 +1,139 @@
+/* Terminal panel chrome — theme-aware, follows the app's light/dark mode via CSS variables
+   (see frontend/src/index.css). xterm's own theme (background/foreground/ANSI colors) is
+   handled separately in xtermTheme.ts, since xterm requires literal color values. */
+
+.terminal-panel {
+  color: var(--foreground);
+}
+
+.terminal-tab {
+  color: var(--sidebar-label);
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.terminal-tab:hover {
+  background: var(--sidebar-hover);
+}
+
+.terminal-tab-active {
+  background: var(--sidebar-selection);
+  border-color: transparent;
+  color: var(--foreground);
+}
+
+.terminal-tab-close {
+  width: 16px;
+  height: 16px;
+  color: var(--sidebar-icon);
+}
+
+.terminal-tab-close:hover {
+  color: var(--foreground);
+}
+
+.terminal-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.terminal-icon-btn:hover:not(:disabled) {
+  background: var(--sidebar-hover);
+  color: var(--foreground);
+}
+
+.terminal-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.terminal-status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.terminal-status-dot-running {
+  background: var(--status-success);
+  animation: terminal-dot-pulse 2s ease-in-out infinite;
+}
+
+.terminal-status-dot-exited {
+  background: var(--sidebar-icon);
+}
+
+@keyframes terminal-dot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 4px rgba(74, 222, 128, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
+.terminal-dropdown-content {
+  background: var(--toolbar-surface);
+  border: 1px solid var(--outline);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.dark .terminal-dropdown-content {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.terminal-dropdown-item {
+  color: var(--foreground);
+}
+
+.terminal-dropdown-item:hover,
+.terminal-dropdown-item[data-highlighted] {
+  background: var(--sidebar-hover);
+}
+
+.terminal-dropdown-item[data-disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.terminal-launch-btn {
+  background: var(--toolbar-surface);
+  border: 1px solid var(--palette-border-mid);
+  color: var(--foreground);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.terminal-launch-btn:hover:not(:disabled) {
+  border-color: rgba(232, 163, 0, 0.5);
+  background: rgba(232, 163, 0, 0.06);
+}
+
+.terminal-empty-state {
+  color: var(--muted-foreground);
+}
+
+/* xterm.js viewport fills the body; padding keeps text off the panel edges. */
+.terminal-view-container .xterm {
+  height: 100%;
+  padding: 8px;
+}
+
+.terminal-view-container .xterm-viewport {
+  background-color: transparent !important;
+}

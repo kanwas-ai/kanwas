@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kanwas</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        /* Matches the app icon background (#282726) so the loading page reads
+           as a continuation of the icon, not a separate flash of UI. */
+        background: #282726;
+        color: #ece9e6;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* titleBarStyle: hiddenInset draws the traffic lights over our content
+         instead of a native title bar, but the window is otherwise
+         undraggable there unless something marks a drag region — Electron
+         doesn't do this automatically for the inset strip. This page is only
+         shown briefly (probe/start/error states), but covering it costs
+         nothing since .stage is centered well below this strip. */
+      .titlebar-drag-region {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 40px;
+        app-region: drag;
+        -webkit-app-region: drag;
+      }
+
+      .stage {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 28px;
+        padding: 32px;
+        max-width: 420px;
+        text-align: center;
+      }
+
+      .wordmark {
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #f4f1ec;
+      }
+
+      .spinner {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2.5px solid rgba(236, 233, 230, 0.15);
+        border-top-color: rgba(236, 233, 230, 0.75);
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .status {
+        font-size: 13px;
+        line-height: 1.5;
+        color: rgba(236, 233, 230, 0.6);
+        min-height: 1.5em;
+      }
+
+      .error-panel {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+      }
+
+      .error-panel.visible {
+        display: flex;
+      }
+
+      .error-message {
+        font-size: 12.5px;
+        line-height: 1.6;
+        color: rgba(236, 233, 230, 0.75);
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(236, 233, 230, 0.1);
+        border-radius: 8px;
+        padding: 12px 14px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        text-align: left;
+        max-height: 220px;
+        overflow-y: auto;
+        width: 100%;
+      }
+
+      button.pick-folder {
+        display: none;
+        appearance: none;
+        border: 1px solid rgba(236, 233, 230, 0.2);
+        background: rgba(236, 233, 230, 0.08);
+        color: #f4f1ec;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 9px 18px;
+        border-radius: 7px;
+        cursor: pointer;
+      }
+
+      button.pick-folder:hover {
+        background: rgba(236, 233, 230, 0.14);
+      }
+
+      button.pick-folder.visible {
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="titlebar-drag-region"></div>
+    <div class="stage">
+      <div class="wordmark">Kanwas</div>
+      <div class="spinner" id="spinner"></div>
+      <div class="status" id="status">Looking for a running Kanwas daemon…</div>
+      <div class="error-panel" id="error-panel">
+        <div class="error-message" id="error-message"></div>
+        <button class="pick-folder" id="pick-folder">Choose Folder…</button>
+      </div>
+    </div>
+    <script>
+      const spinnerEl = document.getElementById('spinner')
+      const statusEl = document.getElementById('status')
+      const errorPanelEl = document.getElementById('error-panel')
+      const errorMessageEl = document.getElementById('error-message')
+      const pickFolderEl = document.getElementById('pick-folder')
+
+      function applyStatus(payload) {
+        statusEl.textContent = payload.message || ''
+
+        if (payload.state === 'error') {
+          spinnerEl.style.display = 'none'
+          errorPanelEl.classList.add('visible')
+          errorMessageEl.textContent = payload.message || 'Something went wrong.'
+          pickFolderEl.classList.toggle('visible', !!payload.showPicker)
+        } else {
+          spinnerEl.style.display = 'block'
+          errorPanelEl.classList.remove('visible')
+        }
+      }
+
+      window.kanwas.onStatus(applyStatus)
+
+      pickFolderEl.addEventListener('click', () => {
+        applyStatus({ state: 'starting', message: 'Waiting for folder selection…', showPicker: false })
+        window.kanwas.pickFolder()
+      })
+
+      // The main process's bootstrap run may emit a status before this
+      // listener is attached — announce readiness so it can replay the
+      // latest buffered status to us.
+      window.kanwas.uiReady()
+    </script>
+  </body>
+</html>

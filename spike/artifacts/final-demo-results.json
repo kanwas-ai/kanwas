@@ -1,0 +1,31 @@
+{
+  "launchCanvasId": "b45f8535-a234-4446-b17e-b131dc0568ee",
+  "texts": [
+    "announcement Share We're launching soon We're excited to announce our upcoming launch. Stay tuned for more details as we finalize the release. Highlights New product experience Available to all users at launch More details coming soon",
+    "checklist Share Launch Checklist Finalize announcement copy QA the release build Notify support team Schedule social media posts Confirm rollback plan",
+    "faq Share FAQ When is the launch? Date to be announced soon. Who has access? All existing users will get access automatically. Where do I report issues? Contact the support team via the usual channel."
+  ],
+  "results": [
+    {
+      "name": "root canvas shows the launch/ folder card",
+      "pass": true
+    },
+    {
+      "name": "launch canvas shows announcement note",
+      "pass": true
+    },
+    {
+      "name": "launch canvas shows checklist note",
+      "pass": true
+    },
+    {
+      "name": "launch canvas shows FAQ note",
+      "pass": true
+    },
+    {
+      "name": "checklist edit visible (2 items checked)",
+      "pass": true,
+      "detail": "2/5 checked"
+    }
+  ]
+}

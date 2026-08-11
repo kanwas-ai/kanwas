@@ -1,0 +1,11 @@
+{
+  "extends": "@adonisjs/tsconfig/tsconfig.app.json",
+  "compilerOptions": {
+    "outDir": "./build",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "../../backend/types/**/*.d.ts"],
+  "exclude": ["node_modules", "build"]
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "binary rename → file moved, bytes preserved, id stable",
+    "pass": true,
+    "detail": "uploaded-photo.png → renamed-shot.png, id a543b558 == a543b558"
+  },
+  {
+    "name": "external binary replace → node contentHash refreshed",
+    "pass": true,
+    "detail": "hash a7c3b756 → fc6e916f"
+  },
+  {
+    "name": "binary delete → file moved to .kanwas/trash",
+    "pass": true,
+    "detail": "dataset.csv trashed=true"
+  }
+]

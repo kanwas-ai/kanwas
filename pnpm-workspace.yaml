@@ -1,0 +1,13 @@
+packages:
+  - backend
+  - frontend
+  - shared
+  - execenv
+  - yjs-server
+  - local-daemon
+  - website
+  - cli
+  - admin/frontend
+  - admin/backend
+  - packages/*
+  - desktop

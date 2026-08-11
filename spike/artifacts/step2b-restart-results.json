@@ -1,0 +1,22 @@
+[
+  {
+    "name": "typed text renders after restart",
+    "pass": true,
+    "detail": "RESTART-1783080486279"
+  },
+  {
+    "name": "created note renders with SAME id after restart",
+    "pass": true,
+    "detail": "0630993b-3fb7-46a5-80ff-b1548c0bdcb0"
+  },
+  {
+    "name": "node id set identical across restart",
+    "pass": true,
+    "detail": "7 nodes"
+  },
+  {
+    "name": "node positions identical across restart",
+    "pass": true,
+    "detail": "all match"
+  }
+]

@@ -1,0 +1,53 @@
+{
+  "name": "website",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "figma:get-images": "node scripts/figma-get-images.mjs",
+    "figma:get-annotations": "node scripts/figma-get-annotations.mjs"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.1",
+    "kanwas-art": "file:vendor/kanwas-art",
+    "next": "16.1.6",
+    "playwright": "^1.58.2",
+    "react": "19.2.3",
+    "react-audio-visualize": "github:DialerAI/react-audio-visualize#cddd9c30c3270c794cce273ad684cc380328bd7d",
+    "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@google/genai": "1.38.0",
+    "@playwright/test": "^1.57.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "baseline-browser-mapping": "^2.9.19",
+    "dotenv": "^16.4.5",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "sharp": "^0.33.5",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "browserslist": {
+    "production": [
+      "last 2 Chrome versions",
+      "last 2 Edge versions",
+      "last 2 Firefox versions",
+      "last 2 Safari versions"
+    ],
+    "development": [
+      "last 1 Chrome version",
+      "last 1 Edge version",
+      "last 1 Firefox version",
+      "last 1 Safari version"
+    ]
+  }
+}

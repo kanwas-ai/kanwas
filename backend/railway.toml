@@ -1,0 +1,14 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+preDeployCommand = "sh -c 'echo \"[Railway] Checking migration status...\" && node ace migration:status && echo \"[Railway] Running migrations...\" && node ace migration:run --force && echo \"[Railway] Migration status after run:\" && node ace migration:status'"
+startCommand = "node bin/server.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+[service]
+name = "node-core"

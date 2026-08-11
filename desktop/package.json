@@ -1,0 +1,35 @@
+{
+  "name": "desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "bundle": "node build.mjs",
+    "dev": "pnpm bundle && electron .",
+    "build": "pnpm bundle && electron-builder --mac"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "electron": "^43.1.1",
+    "electron-builder": "^26",
+    "esbuild": "^0.25",
+    "typescript": "^5.7.2"
+  },
+  "build": {
+    "appId": "ai.kanwas.desktop",
+    "productName": "Kanwas",
+    "files": [
+      "dist/**",
+      "ui/**",
+      "build/**"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "target": "dir",
+      "icon": "build/icon.icns",
+      "identity": null
+    }
+  }
+}

@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The PM Operating System | Kanwas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #e9e9e9;
+      --bg-card: #f0f0f0;
+      --bg-white: #ffffff;
+      --text-display: #1d1d1d;
+      --text-primary: #353535;
+      --text-muted: rgba(29, 29, 29, 0.55);
+      --accent-gold: #ffb300;
+      --accent-gold-strong: #d49600;
+      --border: #dcdcdc;
+      --font-display: 'Libre Baskerville', Georgia, serif;
+      --font-brand: 'Poppins', sans-serif;
+      --font-ui: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font-brand);
+      background: #d0d0d0;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .infographic {
+      width: 820px;
+      background: var(--bg);
+      padding: 32px 36px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .infographic::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 120% 80% at 20% 0%, rgba(255, 179, 0, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 100% 60% at 80% 100%, rgba(255, 179, 0, 0.06) 0%, transparent 40%),
+        radial-gradient(ellipse 80% 50% at 50% 50%, rgba(255, 179, 0, 0.03) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .infographic::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg width='800' height='400' viewBox='0 0 800 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 200 Q200 150 400 200 T800 200' fill='none' stroke='%23ffb300' stroke-width='0.5' opacity='0.15'/%3E%3Cpath d='M0 220 Q200 170 400 220 T800 220' fill='none' stroke='%23ffb300' stroke-width='0.5' opacity='0.1'/%3E%3Cpath d='M0 180 Q200 130 400 180 T800 180' fill='none' stroke='%23ffb300' stroke-width='0.5' opacity='0.1'/%3E%3C/svg%3E");
+      background-size: 100% 100%;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .logo { height: 26px; width: auto; }
+
+    .tag {
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      background: var(--bg-white);
+      border: 1px solid var(--border);
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+
+    /* Title */
+    .title-section { margin-bottom: 16px; }
+
+    .main-title {
+      font-family: var(--font-display);
+      font-size: 30px;
+      font-weight: 400;
+      line-height: 1.2;
+      color: var(--text-display);
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-family: var(--font-brand);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Proof blocks */
+    .proof-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .proof-block {
+      background: var(--bg-white);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+
+    .proof-block-icon {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .proof-block-text {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-display);
+      line-height: 1.3;
+    }
+
+    /* Section styles */
+    .section {
+      background: var(--bg-white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section.stretch-content .agent-grid {
+      flex: 1;
+      align-content: center;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .section-icon {
+      width: 18px;
+      height: 18px;
+      background: var(--text-display);
+      border-radius: 4px;
+      color: white;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .section-title {
+      font-family: var(--font-brand);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-display);
+    }
+
+    .section-desc {
+      font-family: var(--font-brand);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+
+    /* Grid layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    /* Context tags */
+    .context-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .context-tag {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+      background: var(--bg-card);
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    /* Workspace visual */
+    .workspace-visual {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .workspace-item {
+      background: var(--bg-card);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .workspace-item-title {
+      font-family: var(--font-brand);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-display);
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .workspace-item-title .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .workspace-item-desc {
+      font-family: var(--font-brand);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    /* Command chips */
+    .command-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .cmd {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-display);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      border-radius: 5px;
+    }
+
+    .cmd .slash { color: var(--accent-gold-strong); }
+
+    /* Agent cards */
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .agent-card {
+      background: var(--bg-card);
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .agent-icon {
+      font-size: 20px;
+      margin-bottom: 5px;
+    }
+
+    .agent-name {
+      font-family: var(--font-brand);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-display);
+      margin-bottom: 2px;
+    }
+
+    .agent-desc {
+      font-family: var(--font-brand);
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    /* Connector rail */
+    .connector-rail {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .connector {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+      background: var(--bg-card);
+      padding: 6px 11px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .connector-count {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-gold-strong);
+      padding: 6px 11px;
+    }
+
+    /* Team badges */
+    .team-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .team-badge {
+      flex: 1;
+      background: var(--bg-card);
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .team-badge-icon { font-size: 18px; margin-bottom: 4px; }
+
+    .team-badge-name {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Workflow table */
+    .workflow-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .workflow-table th {
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      text-align: left;
+      padding: 0 8px 8px 0;
+    }
+
+    .workflow-table td {
+      font-family: var(--font-brand);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      padding: 8px 8px 8px 0;
+      border-top: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .workflow-table .cmd-cell {
+      font-family: var(--font-mono);
+      color: var(--accent-gold-strong);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .workflow-table .output-cell {
+      font-weight: 600;
+      color: var(--text-display);
+    }
+
+    /* CTA */
+    .cta-section {
+      background: var(--text-display);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cta-text { color: white; }
+
+    .cta-title {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 400;
+      margin-bottom: 3px;
+    }
+
+    .cta-desc {
+      font-family: var(--font-brand);
+      font-size: 11px;
+      font-weight: 500;
+      opacity: 0.7;
+    }
+
+    .cta-buttons { display: flex; gap: 8px; }
+
+    .cta-btn {
+      font-family: var(--font-brand);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 10px 18px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .cta-btn-primary {
+      background: var(--accent-gold);
+      color: var(--text-display);
+    }
+
+    .cta-btn-secondary {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.35);
+      color: white;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-brand {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .footer-cta {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .footer-cta .action {
+      color: var(--accent-gold-strong);
+      font-weight: 700;
+    }
+
+    /* Highlight box */
+    .highlight-box {
+      background: linear-gradient(135deg, rgba(255, 179, 0, 0.12), rgba(255, 179, 0, 0.03));
+      border: 1px solid rgba(255, 179, 0, 0.3);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 10px;
+    }
+
+    .highlight-text {
+      font-family: var(--font-brand);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-display);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="infographic">
+    <div class="content">
+      <!-- Header -->
+      <header class="header">
+        <svg class="logo" viewBox="0 0 181 51" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M59.07 33L51.99 23.7V33H46.86V11.94H51.99V21.18L59.01 11.94H65.04L56.88 22.26L65.34 33H59.07ZM66.758 24.6C66.758 22.88 67.078 21.37 67.718 20.07C68.378 18.77 69.268 17.77 70.388 17.07C71.508 16.37 72.758 16.02 74.138 16.02C75.318 16.02 76.348 16.26 77.228 16.74C78.128 17.22 78.818 17.85 79.298 18.63V16.26H84.428V33H79.298V30.63C78.798 31.41 78.098 32.04 77.198 32.52C76.318 33 75.288 33.24 74.108 33.24C72.748 33.24 71.508 32.89 70.388 32.19C69.268 31.47 68.378 30.46 67.718 29.16C67.078 27.84 66.758 26.32 66.758 24.6ZM79.298 24.63C79.298 23.35 78.938 22.34 78.218 21.6C77.518 20.86 76.658 20.49 75.638 20.49C74.618 20.49 73.748 20.86 73.028 21.6C72.328 22.32 71.978 23.32 71.978 24.6C71.978 25.88 72.328 26.9 73.028 27.66C73.748 28.4 74.618 28.77 75.638 28.77C76.658 28.77 77.518 28.4 78.218 27.66C78.938 26.92 79.298 25.91 79.298 24.63ZM98.3393 16.08C100.299 16.08 101.859 16.72 103.019 18C104.199 19.26 104.789 21 104.789 23.22V33H99.6893V23.91C99.6893 22.79 99.3993 21.92 98.8193 21.3C98.2393 20.68 97.4593 20.37 96.4793 20.37C95.4993 20.37 94.7193 20.68 94.1393 21.3C93.5593 21.92 93.2693 22.79 93.2693 23.91V33H88.1393V16.26H93.2693V18.48C93.7893 17.74 94.4893 17.16 95.3693 16.74C96.2493 16.3 97.2393 16.08 98.3393 16.08ZM132.384 16.26L127.854 33H122.184L119.544 22.14L116.814 33H111.174L106.614 16.26H111.744L114.114 28.23L116.934 16.26H122.364L125.214 28.17L127.554 16.26H132.384ZM133.32 24.6C133.32 22.88 133.64 21.37 134.28 20.07C134.94 18.77 135.83 17.77 136.95 17.07C138.07 16.37 139.32 16.02 140.7 16.02C141.88 16.02 142.91 16.26 143.79 16.74C144.69 17.22 145.38 17.85 145.86 18.63V16.26H150.99V33H145.86V30.63C145.36 31.41 144.66 32.04 143.76 32.52C142.88 33 141.85 33.24 140.67 33.24C139.31 33.24 138.07 32.89 136.95 32.19C135.83 31.47 134.94 30.46 134.28 29.16C133.64 27.84 133.32 26.32 133.32 24.6ZM145.86 24.63C145.86 23.35 145.5 22.34 144.78 21.6C144.08 20.86 143.22 20.49 142.2 20.49C141.18 20.49 140.31 20.86 139.59 21.6C138.89 22.32 138.54 23.32 138.54 24.6C138.54 25.88 138.89 26.9 139.59 27.66C140.31 28.4 141.18 28.77 142.2 28.77C143.22 28.77 144.08 28.4 144.78 27.66C145.5 26.92 145.86 25.91 145.86 24.63ZM161.512 33.24C160.052 33.24 158.752 32.99 157.612 32.49C156.472 31.99 155.572 31.31 154.912 30.45C154.252 29.57 153.882 28.59 153.802 27.51H158.872C158.932 28.09 159.202 28.56 159.682 28.92C160.162 29.28 160.752 29.46 161.452 29.46C162.092 29.46 162.582 29.34 162.922 29.1C163.282 28.84 163.462 28.51 163.462 28.11C163.462 27.63 163.212 27.28 162.712 27.06C162.212 26.82 161.402 26.56 160.282 26.28C159.082 26 158.082 25.71 157.282 25.41C156.482 25.09 155.792 24.6 155.212 23.94C154.632 23.26 154.342 22.35 154.342 21.21C154.342 20.25 154.602 19.38 155.122 18.6C155.662 17.8 156.442 17.17 157.462 16.71C158.502 16.25 159.732 16.02 161.152 16.02C163.252 16.02 164.902 16.54 166.102 17.58C167.322 18.62 168.022 20 168.202 21.72H163.462C163.382 21.14 163.122 20.68 162.682 20.34C162.262 20 161.702 19.83 161.002 19.83C160.402 19.83 159.942 19.95 159.622 20.19C159.302 20.41 159.142 20.72 159.142 21.12C159.142 21.6 159.392 21.96 159.892 22.2C160.412 22.44 161.212 22.68 162.292 22.92C163.532 23.24 164.542 23.56 165.322 23.88C166.102 24.18 166.782 24.68 167.362 25.38C167.962 26.06 168.272 26.98 168.292 28.14C168.292 29.12 168.012 30 167.452 30.78C166.912 31.54 166.122 32.14 165.082 32.58C164.062 33.02 162.872 33.24 161.512 33.24Z" fill="#282726"/>
+          <mask id="mask0" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="12" y="9" width="26" height="26">
+            <rect x="12" y="9" width="26" height="26" fill="#282726"/>
+          </mask>
+          <g mask="url(#mask0)">
+            <rect x="12" y="9" width="26" height="26" fill="url(#logoGrad)"/>
+            <path d="M29.5 3L30.1079 13.1387C30.2291 15.1593 31.8407 16.7709 33.8613 16.8921L44 17.5L33.8613 18.1079C31.8407 18.2291 30.2291 19.8407 30.1079 21.8613L29.5 32L28.8921 21.8613C28.7709 19.8407 27.1593 18.2291 25.1387 18.1079L15 17.5L25.1387 16.8921C27.1593 16.7709 28.7709 15.1593 28.8921 13.1387L29.5 3Z" fill="#E9E9E9"/>
+          </g>
+          <defs>
+            <radialGradient id="logoGrad" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(38 8) rotate(131.496) scale(17.3566)">
+              <stop stop-color="#FFB300"/>
+              <stop offset="1" stop-color="#282726"/>
+            </radialGradient>
+          </defs>
+        </svg>
+        <div class="tag">PM Operating System</div>
+      </header>
+
+      <!-- Title -->
+      <section class="title-section">
+        <h1 class="main-title">Shared operating system for PMs</h1>
+        <p class="subtitle">Context, canvas, skills, agents, connectors, and shared memory — in one operating surface.</p>
+      </section>
+
+      <!-- Proof blocks -->
+      <div class="proof-row">
+        <div class="proof-block">
+          <div class="proof-block-icon">🎯</div>
+          <div class="proof-block-text">Made for PMs</div>
+        </div>
+        <div class="proof-block">
+          <div class="proof-block-icon">📚</div>
+          <div class="proof-block-text">Share product context</div>
+        </div>
+        <div class="proof-block">
+          <div class="proof-block-icon">⚡</div>
+          <div class="proof-block-text">50+ PM /skills</div>
+        </div>
+        <div class="proof-block">
+          <div class="proof-block-icon">🤖</div>
+          <div class="proof-block-text">Agents</div>
+        </div>
+        <div class="proof-block">
+          <div class="proof-block-icon">🔌</div>
+          <div class="proof-block-text">1k+ connections</div>
+        </div>
+      </div>
+
+      <!-- Workflow Rail -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-icon">⚡</div>
+          <div class="section-title">What This Lets a PM Actually Do</div>
+        </div>
+        <table class="workflow-table">
+          <thead>
+            <tr>
+              <th style="width:32%">Input</th>
+              <th style="width:24%">Skill</th>
+              <th style="width:44%">Output</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>10 user interviews</td>
+              <td class="cmd-cell">/user-research-synthesis</td>
+              <td class="output-cell">Themes, quotes, sharpest problems</td>
+            </tr>
+            <tr>
+              <td>Competitor launches feature</td>
+              <td class="cmd-cell">/competitive-research</td>
+              <td class="output-cell">Implications, risks, response options</td>
+            </tr>
+            <tr>
+              <td>Exec review tomorrow</td>
+              <td class="cmd-cell">/meeting-prep</td>
+              <td class="output-cell">Talking points, objections, asks</td>
+            </tr>
+            <tr>
+              <td>Messy Slack thread</td>
+              <td class="cmd-cell">/decision-doc</td>
+              <td class="output-cell">Recommendation, rationale, tradeoffs</td>
+            </tr>
+            <tr>
+              <td>New initiative</td>
+              <td class="cmd-cell">/assumption-validator</td>
+              <td class="output-cell">Key bets, fastest tests</td>
+            </tr>
+            <tr>
+              <td>Launch week</td>
+              <td class="cmd-cell">/launch-readiness</td>
+              <td class="output-cell">Go/no-go gaps, checklist</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Row 1: Context + Workspace -->
+      <div class="grid-2">
+        <!-- Context Layer -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-icon">1</div>
+            <div class="section-title">Product Context Layer</div>
+          </div>
+          <div class="section-desc">Everything PMs need to reason from — in one place.</div>
+          <div class="context-grid">
+            <span class="context-tag">User interviews</span>
+            <span class="context-tag">Research notes</span>
+            <span class="context-tag">Customer calls</span>
+            <span class="context-tag">Roadmap</span>
+            <span class="context-tag">OKRs</span>
+            <span class="context-tag">Specs</span>
+            <span class="context-tag">Decision logs</span>
+            <span class="context-tag">Competitive intel</span>
+            <span class="context-tag">Launch plans</span>
+            <span class="context-tag">Metrics</span>
+          </div>
+        </div>
+
+        <!-- Workspace Layer -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-icon">2</div>
+            <div class="section-title">Workspace Layer</div>
+          </div>
+          <div class="section-desc">Canvas for messy thinking. Files for durable memory.</div>
+          <div class="workspace-visual">
+            <div class="workspace-item">
+              <div class="workspace-item-title"><span class="dot" style="background:#8b5cf6"></span> Spatial canvas</div>
+              <div class="workspace-item-desc">For both collaborative and structured product work</div>
+            </div>
+            <div class="workspace-item">
+              <div class="workspace-item-title"><span class="dot" style="background:#3b82f6"></span> Context graph</div>
+              <div class="workspace-item-desc">Rich context graph based on .md files</div>
+            </div>
+            <div class="workspace-item">
+              <div class="workspace-item-title"><span class="dot" style="background:#10b981"></span> Collaborative</div>
+              <div class="workspace-item-desc">Share your workspace and single files</div>
+            </div>
+            <div class="workspace-item">
+              <div class="workspace-item-title"><span class="dot" style="background:#f59e0b"></span> Works 24/7</div>
+              <div class="workspace-item-desc">Agents working while you sleep</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Skills + Agents -->
+      <div class="grid-2">
+        <!-- Skill Layer -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-icon">3</div>
+            <div class="section-title">Skill Layer</div>
+          </div>
+          <div class="section-desc">Reusable PM workflows, not prompts you rewrite from scratch.</div>
+          <div class="command-grid">
+            <span class="cmd"><span class="slash">/</span>prd</span>
+            <span class="cmd"><span class="slash">/</span>competitive-research</span>
+            <span class="cmd"><span class="slash">/</span>user-research-synthesis</span>
+            <span class="cmd"><span class="slash">/</span>meeting-prep</span>
+            <span class="cmd"><span class="slash">/</span>decision-doc</span>
+            <span class="cmd"><span class="slash">/</span>stakeholder-alignment</span>
+            <span class="cmd"><span class="slash">/</span>launch-readiness</span>
+            <span class="cmd"><span class="slash">/</span>status-update</span>
+            <span class="cmd"><span class="slash">/</span>assumption-validator</span>
+            <span class="cmd"><span class="slash">/</span>roadmap-builder</span>
+          </div>
+        </div>
+
+        <!-- Subagent Layer -->
+        <div class="section stretch-content">
+          <div class="section-header">
+            <div class="section-icon">4</div>
+            <div class="section-title">Subagent Layer</div>
+          </div>
+          <div class="section-desc">Specialized agents do focused work.</div>
+          <div class="agent-grid">
+            <div class="agent-card">
+              <div class="agent-icon">🔍</div>
+              <div class="agent-name">Research</div>
+              <div class="agent-desc">External evidence</div>
+            </div>
+            <div class="agent-card">
+              <div class="agent-icon">🗂️</div>
+              <div class="agent-name">Explorer</div>
+              <div class="agent-desc">Workspace context</div>
+            </div>
+            <div class="agent-card">
+              <div class="agent-icon">🔌</div>
+              <div class="agent-name">Tools</div>
+              <div class="agent-desc">External systems</div>
+            </div>
+            <div class="agent-card">
+              <div class="agent-icon">✍️</div>
+              <div class="agent-name">Writer</div>
+              <div class="agent-desc">Stakeholder output</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Connectors + Team -->
+      <div class="grid-2">
+        <!-- Connection Layer -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-icon">5</div>
+            <div class="section-title">Connection Layer</div>
+          </div>
+          <div class="section-desc">Tool access without a setup project.</div>
+          <div class="connector-rail">
+            <span class="connector">Slack</span>
+            <span class="connector">Linear</span>
+            <span class="connector">Jira</span>
+            <span class="connector">GitHub</span>
+            <span class="connector">Notion</span>
+            <span class="connector">Gmail</span>
+            <span class="connector">Docs</span>
+            <span class="connector">Sheets</span>
+            <span class="connector">Figma</span>
+            <span class="connector-count">+1000 more connections</span>
+          </div>
+        </div>
+
+        <!-- Team Layer -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-icon">6</div>
+            <div class="section-title">Team Layer</div>
+          </div>
+          <div class="section-desc">The system stays when one PM logs off.</div>
+          <div class="team-row">
+            <div class="team-badge">
+              <div class="team-badge-icon">👤</div>
+              <div class="team-badge-name">PM</div>
+            </div>
+            <div class="team-badge">
+              <div class="team-badge-icon">🎨</div>
+              <div class="team-badge-name">Design</div>
+            </div>
+            <div class="team-badge">
+              <div class="team-badge-icon">💻</div>
+              <div class="team-badge-name">Eng</div>
+            </div>
+            <div class="team-badge">
+              <div class="team-badge-icon">📊</div>
+              <div class="team-badge-name">Leadership</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Punchline -->
+      <div class="highlight-box">
+        <div class="highlight-text">The best PM setup is not a chatbot. It's a shared operating system for product context, workflows, and decisions.</div>
+      </div>
+
+      <!-- CTA -->
+      <section class="cta-section">
+        <div class="cta-text">
+          <div class="cta-title">Want this setup without the assembly?</div>
+          <div class="cta-desc">All six layers, ready to use.</div>
+        </div>
+        <div class="cta-buttons">
+          <button class="cta-btn cta-btn-primary">Join the beta</button>
+          <button class="cta-btn cta-btn-secondary">Comment "setup"</button>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <div class="footer-brand">kanwas.ai</div>
+        <div class="footer-cta">Found this useful? <span class="action">Like + repost</span></div>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>
