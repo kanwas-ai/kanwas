@@ -2,21 +2,30 @@
 export type { Logger } from './logging/types.js'
 export { noopLogger } from './logging/types.js'
 
-export { buildDocumentSharePath, buildWorkspaceRootPath } from './document-share.js'
+export { LOCAL_USER } from './local-api.js'
 export type {
-  DocumentShareAccessMode,
-  DocumentShareRecord,
-  DocumentShareOwnerState,
-  WorkspaceDocumentSharesState,
-  ActivePublicDocumentShare,
-  RevokedPublicDocumentShare,
-  MissingPublicDocumentShare,
-  PublicDocumentShareResolveResult,
-  ActiveDocumentShareSocketAccess,
-  RevokedDocumentShareSocketAccess,
-  MissingDocumentShareSocketAccess,
-  DocumentShareSocketAccessResolveResult,
-} from './document-share.js'
+  CreateTerminalSessionRequest,
+  EnrichedUiContext,
+  FlushResponse,
+  KanwasDesktopBridge,
+  LinkMetadataRequest,
+  LinkMetadataResponse,
+  LocalApiErrorBody,
+  LocalUser,
+  NoteSaveConflict,
+  NoteSaveRequest,
+  NoteSaveResponse,
+  ResolvedFileRef,
+  TerminalAgent,
+  TerminalAgentId,
+  TerminalSession,
+  UiContextInput,
+  UploadResponse,
+  VaultStatus,
+  VaultSummary,
+  WorkspaceSummary,
+  YjsTokenResponse,
+} from './local-api.js'
 
 // Export shared types
 export type {
@@ -220,33 +229,3 @@ export type {
   PositionDirection,
   PositionOptions,
 } from './constants.js'
-
-// Export skills system
-export type {
-  SkillName,
-  SkillDescription,
-  SkillMetadata,
-  ParsedSkill,
-  StoredSkill,
-  SkillParseResult,
-  SkillParseError,
-  SkillParseOutcome,
-  SkillValidationResult,
-  SkillSummary,
-  SkillActivation,
-} from './skills/index.js'
-
-export {
-  skillNameSchema,
-  skillDescriptionSchema,
-  skillMetadataSchema,
-  parsedSkillSchema,
-  storedSkillSchema,
-  parseSkillMd,
-  serializeSkillMd,
-  validateSkillName,
-  validateSkillDescription,
-  validateSkillMetadata,
-  isReservedName,
-  RESERVED_WORDS,
-} from './skills/index.js'

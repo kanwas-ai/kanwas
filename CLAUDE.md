@@ -1,181 +1,94 @@
-Never add Claude Code as co-author to commits, it makes the history hard to navigate.
+# Kanwas engineering guide
 
-## Resolving Merge Conflicts in pnpm-lock.yaml
+Never add an AI tool as a commit co-author.
 
-**Never use `git checkout --theirs` or `--ours` for pnpm-lock.yaml conflicts.** This takes one version without incorporating changes from both sides.
+## Product boundary
 
-Instead, resolve lockfile conflicts by regenerating:
+Kanwas is a local-first Electron application. The desktop process embeds the local runtime; there is no hosted application service, account system, organization model, or separately launched process.
+
+The marketing site in `website/` is an independent package. Do not couple it to desktop packages or change it as a side effect of app work.
+
+## Monorepo structure
+
+- `desktop/` — Electron main process and narrow preload bridge.
+- `renderer/` — React/Vite/React Flow/BlockNote desktop UI.
+- `local-runtime/` — embedded loopback HTTP server, vault registry, folder synchronization, terminal, uploads, and MCP.
+- `yjs-core/` — reusable Yjs rooms, protocols, socket transport, token validation, and persistence interfaces. It is a library, not a standalone service.
+- `shared/` — workspace model, filesystem conversion, path helpers, and local API contracts shared across process boundaries.
+- `website/` — standalone marketing website, outside the desktop runtime graph.
+
+When looking for types or conversion utilities, check `shared/` first. Keep browser-safe types separate from Node-only code: `@blocknote/server-util` and filesystem helpers must not enter the renderer bundle.
+
+## Development
+
+Install once at the repository root, then run Electron:
 
 ```bash
-# Accept either version to clear the conflict markers
-git checkout --theirs pnpm-lock.yaml
-# Then regenerate to include all package.json changes
 pnpm install
-# Stage the regenerated lockfile
-git add pnpm-lock.yaml
+pnpm --filter @kanwas/desktop dev
 ```
 
-This ensures the lockfile reflects the merged state of all package.json files.
+Do not start a Yjs or application service separately. Electron owns the runtime lifecycle.
 
-## Monorepo Structure
+Run the build/typecheck/test scripts of every changed workspace. Builds and typechecks must fail on errors; do not hide failures with `|| true` or filtered diagnostics.
 
-- `/backend` - AdonisJS API server, services (the built-in AI agent was removed on the `local-first` branch, Step 1)
-- `/frontend` - React app
-- `/shared` - Shared types and utilities (WorkspaceDocument types, ContentConverter, path utilities)
-- `/cli` - CLI tool (`kanwas init/pull/push`). Auth via browser-based OAuth flow (like GitHub CLI). Frozen with cloud; deprecated on the `local-first` branch.
-- `/execenv` - Execution environment (syncs yDoc ↔ filesystem). Formerly ran inside the E2B/Docker agent sandbox; on the `local-first` branch it is daemon material for Step 2.
+When resolving a `pnpm-lock.yaml` conflict, regenerate it after all manifests are correct. Never keep one side of a conflicted lockfile as the final resolution.
 
-When looking for types or utilities, check `shared` first - it exports common code used by both backend and frontend.
+## Runtime invariants
 
-**Key utility:** `workspaceToFilesystem()` in `shared/src/workspace/converter.ts` is the canonical way to convert a workspace yDoc to a filesystem tree. Used by sandbox hydration - reuse it for any workspace→files conversion.
+- A selected folder (a **vault**) is durable truth. Yjs is live editing state and must flush through the folder persistence layer.
+- The internal HTTP/Yjs server listens only on loopback and closes with Electron.
+- Renderer network requests are same-origin; the runtime rejects cross-origin browser requests.
+- Vault mutations use the preload/main-process boundary. Forgetting a vault removes registry state only; it never deletes user files.
+- The vault registry lives under Electron's `userData`. Legacy `~/.kanwas/vaults.json` import is one-time and non-destructive.
+- Electron uses a single-instance lock. A second launch focuses the existing window rather than starting another runtime on the same port.
+- On quit, give the renderer a bounded opportunity to flush pending note saves, then close terminals, mounts, Yjs rooms, watchers, and HTTP in order.
+- Unknown local API routes return real `404`/`405` responses. Do not add permissive cloud-compatibility stubs.
 
-**Warning**: `shared` exports `ContentConverter` which depends on `@blocknote/server-util` (Node.js-only). Importing runtime utilities from `shared` in frontend code may pull in server-only dependencies. For simple Y.Doc operations in frontend, inline the logic or import types only (`import type`).
+## Filesystem and paths
 
-When completing a task, suggest to the user: "Would you like to run `/reflect` to capture any learnings from this session?"
+Internal vault-relative paths use `/` separators. Convert to native paths only at filesystem boundaries.
 
-## Running Services Locally
+Treat these cases as first-class:
 
-**Important:** Never start services automatically. If services are needed for a task (e.g., running tests), detect if they're running and ask the user to start them.
+- Windows drive-letter and UNC paths
+- case-insensitive vault deduplication on Windows
+- traversal and symlink escape attempts
+- Windows reserved names and replace-on-rename behavior
+- atomic writes, watcher suppression, and external rename storms
 
-**Docker Compose** - Only for infrastructure services:
+The canonical workspace-to-filesystem conversion code lives in `shared/src/workspace/`. Reuse it rather than creating a second serialization format.
 
-```bash
-docker-compose up -d postgres redis   # Infrastructure only
-```
-
-**Backend, Frontend, Yjs Server** - Run directly with pnpm (not via docker-compose):
-
-```bash
-cd backend && pnpm dev      # Backend API server
-cd frontend && pnpm dev     # Frontend React app
-cd yjs-server && pnpm dev   # Yjs realtime server
-```
-
-## CLI Tools
-
-**Railway** - Production backend hosting
-
-```bash
-cd backend && railway logs --tail 100    # View backend logs
-railway status                           # Deployment status
-```
-
-**GitHub CLI** - CI/CD and workflows
-
-```bash
-gh run list                              # List recent CI runs
-gh run view <id>                         # View specific run details
-gh run watch <id>                        # Watch run in progress
-gh workflow run <name>                   # Trigger workflow manually
-```
-
-## Deployment Pipeline
-
-Two environments: **staging** (auto on push to master) and **production** (manual workflow dispatch).
-
-| Package        | Platform | Staging | Production |
-| -------------- | -------- | ------- | ---------- |
-| **backend**    | Railway  | Auto    | Manual     |
-| **frontend**   | Railway  | Auto    | Manual     |
-| **yjs-server** | Railway  | Auto    | Manual     |
-
-**To deploy to production:** GitHub Actions → Select workflow → Run workflow → Choose "production"
-
-(The E2B sandbox template deploy for `shared + execenv` was removed with the built-in agent on the `local-first` branch.)
-
-For detailed infrastructure docs (Railway CLI, Yjs server, secrets, URLs), see `private/agent_docs/infrastructure.md`.
-
-## Execenv Architecture
-
-The `execenv` package handles bidirectional sync between a folder and the yDoc (formerly inside the agent sandbox; now the basis for the local daemon):
-
-```
-Filesystem (folder)  ←→  SyncManager  ←→  FilesystemSyncer (shared)  ←→  yDoc (Yjs server)
-                           ↑
-                      FileWatcher (chokidar)
-```
-
-**Key files:**
-
-- `watcher.ts` - Chokidar-based file watcher, emits create/update/delete events
-- `sync-manager.ts` - Orchestrates sync, handles auto-metadata for canvases
-- `filesystem.ts` - Low-level file operations (read, write, YAML utilities)
-
-**Canvas auto-metadata:** When directories or `.md` files are created on disk (e.g. by an external CLI agent), `sync-manager.ts` automatically manages `metadata.yaml`. The FilesystemSyncer (in shared) then syncs these changes to yDoc.
-
-**Event flow:** File change → watcher → sync-manager (may auto-update metadata.yaml) → FilesystemSyncer → yDoc. Auto-generated files trigger their own events, which is handled gracefully.
-
-## Shared Package Development
-
-**Important:** After modifying files in `shared/src/`, you must rebuild before other packages see the changes:
-
-```bash
-pnpm --filter shared build
-```
-
-This is especially critical when debugging issues across packages - execenv and backend import from the built `shared/dist/` output, not the source files directly.
-
-## Yjs/BlockNote Gotchas
+## Yjs and BlockNote gotchas
 
 ### Clone loses non-string attributes
 
-`Y.XmlElement.clone()` only copies **string** attributes from the internal `_map`. Numbers and booleans are lost:
+`Y.XmlElement.clone()` only preserves string attributes. Numeric and boolean BlockNote properties can be lost. Prefer the shared content conversion and fragment replacement paths.
 
-- `level: 1` (number) → lost, defaults to 1
-- `isToggleable: false` (boolean) → lost
-- `textColor: "default"` (string) → preserved
+### Detached fragments must be adopted
 
-This is why heading levels (h1, h2, h3) get flattened to h1 when using clone().
+A detached `Y.XmlFragment` produced by BlockNote conversion must be attached to a Y container before its contents are read. Adoption integrates it into the target document.
 
-### BlockNote internal structure
+### Replace note fragments coherently
 
-BlockNote stores blocks as nested XmlElements with props in `_map`:
+When replacing BlockNote content, replace the entire `noteDoc.getXmlFragment('content')` fragment. The renderer observes fragment identity and remounts the editor binding. Do not partially clone the child XML tree.
 
-```
-noteDoc.getXmlFragment('content')
-  └─ YXmlElement<blockGroup>
-       └─ YXmlElement<blockContainer> (_map: {id: "..."})
-            └─ YXmlElement<heading> (_map: {level: 1, textColor: "default", ...})
-                 └─ YXmlText: "Heading text"
-```
+### Transactions matter
 
-Use `element.toJSON()` or `element.toString()` to see the full structure including `_map` values (they appear as XML attributes in the output).
+Group one user-visible canvas operation into one Yjs transaction with the appropriate origin. This keeps undo, audit metadata, persistence, and external-file reconciliation coherent.
 
-### Fragment adoption
+## Electron boundary
 
-Detached Y.XmlFragments (from `blocksToYXmlFragment()`) must be set to a Y.Map/Y.Array before reading their contents. Once set, Yjs "adopts" the fragment into the target doc.
+- Keep `contextIsolation` and renderer sandboxing enabled.
+- Expose only typed, purpose-specific preload methods; never expose raw `ipcRenderer`, filesystem access, or the runtime object.
+- Allow navigation only to the exact runtime origin. Open ordinary web links through the operating system.
+- Keep native dependencies such as `node-pty` in the desktop/runtime boundary, out of the renderer bundle.
+- Release packaging is deferred. Do not reintroduce checkout-dependent packaging or first-run renderer builds.
 
-### ContentConverter pattern
+## Tests
 
-When updating BlockNote content, replace the entire `noteDoc.getXmlFragment('content')` fragment rather than cloning children. This preserves all nested attributes. The frontend's note-fragment hook observes the attached note doc and handles fragment replacement by remounting the BlockNote editor.
+Synchronization changes require tests for both directions: UI/Yjs to disk and external disk edits to Yjs/UI. Use temporary folders and state directories; never point tests at a real user vault.
 
-### Frontend fragment references
+For desktop behavior, cover macOS and Windows-specific path, shell, PTY, and shutdown behavior. Core startup must work with outbound networking blocked.
 
-BlockNote's `useCreateBlockNote` caches the fragment reference internally. If the backend replaces the fragment (e.g., during sync), the frontend must:
-
-1. Detect the change via Y.Map observer (`useSyncExternalStore`)
-2. Remount the editor component (use fragment identity as React `key`)
-
-## Writing Debug Scripts
-
-When investigating complex issues (especially Yjs/BlockNote structure), write one-off TypeScript scripts:
-
-```bash
-# Run from within a package directory that has the dependencies
-cd /Users/marek/projects/kanwas/shared && npx tsx << 'EOF'
-import * as Y from 'yjs'
-import { ServerBlockNoteEditor } from '@blocknote/server-util'
-
-// Your debug code here
-const editor = ServerBlockNoteEditor.create()
-// ...
-EOF
-```
-
-**Key points:**
-
-- Always run from a package directory (`shared`, `backend`, etc.) that has the needed dependencies in its node_modules
-- Use `npx tsx` for TypeScript support with ESM imports
-- Use heredoc (`<< 'EOF'`) to inline the script
-- Don't try to run from `/tmp` - the dependencies won't be found
-- These scripts are invaluable for understanding Yjs internal structure (inspect `_map`, `toJSON()`, etc.)
+When completing a task, suggest: "Would you like to run `/reflect` to capture any learnings from this session?"

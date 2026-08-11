@@ -1,4 +1,4 @@
-// Browser-safe markdown fidelity export for frontend/runtime usage.
+// Browser-safe markdown fidelity export for renderer/runtime usage.
 // Pure functions over strings/JSON only — no @blocknote/server-util, no Node built-ins.
 
 export {

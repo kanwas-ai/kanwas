@@ -1,0 +1,38 @@
+{
+  "name": "@kanwas/yjs-core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/core.js",
+  "types": "./dist/core.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/core.d.ts",
+      "default": "./dist/core.js"
+    },
+    "./document-store": {
+      "types": "./dist/document-store.d.ts",
+      "default": "./dist/document-store.js"
+    },
+    "./logger": {
+      "types": "./dist/logger.d.ts",
+      "default": "./dist/logger.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "shared": "workspace:*",
+    "socket.io": "^4.8.1",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.27"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "socket.io-client": "^4.8.1",
+    "typescript": "^5.9.2",
+    "vitest": "^4.0.18"
+  }
+}

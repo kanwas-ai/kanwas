@@ -895,7 +895,7 @@ describe('FilesystemSyncer - Binary Files', () => {
       expect(node!.xynode.type).toBe('file')
     })
 
-    it('marks unsectioned binary-created nodes for frontend placement', async () => {
+    it('marks unsectioned binary-created nodes for renderer placement', async () => {
       const setup = createSyncerWithBinarySupport()
       disposeCallbacks.push(setup.dispose)
 
@@ -1223,7 +1223,7 @@ describe('FilesystemSyncer - Binary Files', () => {
 
       // Verify node data was updated
       const data2 = node1!.xynode.data as FileNodeData
-      // Note: storagePath may or may not change depending on backend implementation
+      // Note: storagePath may or may not change depending on the persistence implementation
       // The critical assertion is that contentHash changes for different content
       expect(data2.contentHash).not.toBe(originalContentHash)
       expect(data2.contentHash).toHaveLength(64)

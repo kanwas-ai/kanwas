@@ -1,444 +1,182 @@
-# Kanwas: Comprehensive Functional Architecture
+# Kanwas system overview
 
-## What this system does
+Kanwas is a local-first Electron application for viewing and editing a folder as a spatial canvas. The selected folder is durable truth. Electron embeds every service the UI needs and stops them when the app exits.
 
-Kanwas is a collaborative project operating system for teams working with ideas, documents, and code-like artifacts.
-
-It combines:
-
-- a multiplayer canvas for planning and structuring work,
-- rich collaborative documents,
-- and an AI agent that can reason and execute actions.
-
-In practice, it enables a full loop: plan visually, execute with AI, and inspect results in real time.
-
----
-
-## One-line architecture
-
-Kanwas uses a collaborative CRDT workspace as the canonical state, then continuously projects that state to the UI, backend workflows, and an isolated agent filesystem while preserving consistency and observability.
-
----
-
-## Functional pillars
-
-## 1) Multiplayer collaboration
-
-- Multiple users can edit the same workspace concurrently.
-- Changes are conflict-resilient because the model is CRDT-based.
-- Canvas structure, document content, and metadata all participate in one shared state graph.
-- Presence and shared context are first-class: users see coherent workspace updates as they happen.
-
-## 2) Agent-driven execution
-
-- Users can invoke an AI assistant from inside the workspace.
-- The assistant can reason, call tools, run commands in a sandbox, and create or modify artifacts.
-- Agent execution is streamed as timeline events so users can observe progress and intent, not just final output.
-
-## 3) Research and integrations
-
-- Long-running research tasks can run externally with streamed progress.
-- External tool ecosystems can be connected through integration providers.
-- Skill layers provide reusable behavior and guidance for agent operations.
-
----
-
-## How the system is organized conceptually
+## Process model
 
 ```text
-Experience Layer
-  - Canvas, docs, chat, history
-
-Coordination Layer
-  - Real-time collaboration rooms
-  - Invocation streams and event fanout
-
-Control Layer
-  - Authentication, authorization, orgs
-  - Agent orchestration and workflow services
-
-Execution Layer
-  - Isolated sandboxes for tool execution
-  - Bi-directional filesystem sync
-
-Knowledge Layer
-  - Snapshots and version history
+┌──────────────────────── Electron application ─────────────────────────┐
+│                                                                       │
+│  Main process                                                         │
+│  ├─ window and lifecycle management                                   │
+│  ├─ typed preload/IPC bridge                                           │
+│  └─ local-runtime                                                     │
+│       ├─ vault registry and mounts                                    │
+│       ├─ folder watcher, converter, persistence, uploads              │
+│       ├─ terminal sessions and MCP                                    │
+│       ├─ loopback HTTP/WebSocket server                               │
+│       └─ yjs-core rooms and Socket.IO transport                       │
+│                         ▲                                             │
+│                         │ same-origin loopback transport              │
+│                         ▼                                             │
+│  Sandboxed renderer                                                   │
+│  └─ React + React Flow + BlockNote                                    │
+│                                                                       │
+└──────────────────────────────┬────────────────────────────────────────┘
+                               │ native filesystem APIs
+                               ▼
+                         selected vault folder
 ```
 
-This layering lets Kanwas behave like a single product while keeping responsibilities clean.
+The loopback server is an internal application transport. It binds to `127.0.0.1`, shares the Electron lifecycle, and serves the prebuilt renderer, local API, terminal WebSocket, MCP endpoint, and Yjs Socket.IO path from one origin.
 
----
+## Package responsibilities
 
-## End-to-end functional flows
+### `desktop`
 
-## Flow A: Human edits shared content
+The Electron shell owns application lifecycle and operating-system integrations:
 
-1. A user edits canvas or document content.
-2. The change is applied to collaborative state locally.
-3. Real-time infrastructure propagates updates to all participants.
-4. The UI re-renders affected surfaces with low latency.
-5. Background listeners can trigger downstream processing.
+- enforce a single application instance,
+- start and stop `local-runtime`,
+- create a sandboxed, context-isolated window,
+- expose a narrow preload API,
+- show the native folder picker,
+- restore or focus the active vault,
+- hand external links to the operating system,
+- coordinate the bounded save flush during shutdown.
 
-Result: one shared reality across all users, with minimal merge friction.
+The main process does not discover a checkout, find a system Node executable, or launch a daemon child process.
 
-## Flow B: User invokes the AI agent
+### `renderer`
 
-1. User submits an instruction in chat.
-2. Invocation context is assembled (workspace state, relevant settings, skills, prior timeline).
-3. Agent enters a reasoning/tool loop.
-4. Tool calls execute in isolation and emit structured events.
-5. Timeline updates stream back live to the UI.
-6. Produced artifacts flow back into workspace state.
+The renderer is the desktop UI. It remains a React/Vite application because Chromium renders Electron windows, but it is not deployed as a standalone web application.
 
-Result: AI work is transparent, inspectable, and merged into the same collaborative graph.
+Its responsibilities are canvas interaction, BlockNote editing, navigation, local vault selection, terminal presentation, and UI-context reporting. It has no login, OAuth, account, organization, invitation, sharing, billing, or cloud-workspace model.
 
-## Flow C: Agent modifies files in sandbox
+### `local-runtime`
 
-1. Agent writes files in its sandbox filesystem.
-2. Filesystem watcher detects create/update/delete events.
-3. Sync manager translates filesystem changes into workspace updates.
-4. Workspace updates propagate to users in real time.
-5. Reverse sync applies non-sandbox updates back to filesystem when needed.
+The embedded runtime is the boundary between UI state and local resources. It owns:
 
-Result: agent can use normal file operations while humans keep a live, structured workspace view.
+- the vault registry under Electron's `userData`,
+- mounted folder state and stable workspace identifiers,
+- folder scanning and file watching,
+- conversion between files/`metadata.yaml` and workspace documents,
+- persistence of Yjs document changes back to files,
+- local uploads and raw-file responses,
+- terminal processes and attach WebSockets,
+- link-preview fetching with SSRF and content validation,
+- UI context and the local MCP endpoint,
+- startup, flush, and idempotent shutdown.
 
-## Data and state model (functional view)
+`startLocalRuntime(options)` returns a handle used directly by Electron main. Vault open, label, activation, and forget operations go through that handle rather than public mutation routes.
 
-Kanwas effectively manages several interlinked state classes:
+### `yjs-core`
 
-## Collaborative state
+`yjs-core` contains realtime document mechanics: rooms, synchronization protocol, token checks, awareness, snapshots, and persistence interfaces. It has no standalone entrypoint, cloud object store, deployment configuration, hosted callback, or account/share resolver.
 
-- The canonical shared workspace graph (nodes, documents, structure, metadata).
-- Optimized for concurrent edits and conflict-free merges.
+### `shared`
 
-## Operational state
+`shared` defines the workspace tree and reusable conversion code. It also contains browser-safe DTOs for the renderer/runtime contract. Node-only BlockNote and filesystem utilities must be imported through their server-specific exports so they are not bundled into the renderer.
 
-- Invocation lifecycle, tool call progress, streaming status, and execution metadata.
-- Exists to make AI behavior visible and controllable.
+### `website`
 
-## Workspace navigation state
+The marketing website is an independent workspace. It is not served by Electron and does not participate in the desktop dependency graph.
 
-- Active canvas, selected nodes, and other UI context.
-- Exists to help users and the agent stay oriented within large workspaces.
+## Why Yjs remains
 
-## Identity and access state
+Local-first does not mean the editor can discard its live document model. React Flow and BlockNote update nested workspace state continuously, and terminal/file-watcher activity can change the same vault while it is open.
 
-- Organizations, memberships, invites, and permissions.
-- Exists to enforce tenant boundaries and sharing semantics.
+Yjs provides:
 
-These state classes evolve independently but are connected by events.
+- transactional mutations and coherent undo origins,
+- efficient rich-text updates for BlockNote,
+- document/subdocument identity used by the existing canvas model,
+- awareness and connection state inside the application,
+- a stable seam where persistence can debounce and serialize changes.
 
----
+Yjs is therefore an in-app editing and synchronization engine. It is not the durable cloud source of truth: the folder wins across restarts, and the persistence layer writes accepted UI changes back to disk.
 
-## Collaboration model in depth
+## Data flows
 
-The collaboration model is more than socket broadcast:
+### Opening a vault
 
-- It relies on CRDT semantics for conflict tolerance.
-- It groups related mutations into transactions for coherent undo behavior.
-- It differentiates user-intent changes from system-generated sync changes.
-- It supports fragment replacement patterns when data structures require identity refresh.
-- It uses room semantics so each workspace is an isolated collaboration domain.
+1. The user chooses a folder through the native Electron dialog or selects a remembered vault.
+2. Electron asks the runtime to register and mount the folder.
+3. The runtime scans files and `metadata.yaml`, builds the workspace document, and starts its watcher.
+4. Electron navigates the renderer to the local workspace route.
+5. The renderer requests a short-lived local Yjs token and joins the workspace room at `/yjs/socket.io`.
 
-This is why collaborative editing remains stable even with high update velocity.
+Remembering a folder stores registry metadata only. Removing it from Kanwas never deletes the folder.
 
----
+### Editing in Kanwas
 
-## Agent model in depth
+1. A UI action updates the workspace or note Yjs document in a transaction.
+2. `yjs-core` schedules persistence through the mounted folder store.
+3. The runtime serializes content and canvas metadata to temporary files.
+4. Atomic replacement commits the files and watcher suppression ignores the runtime's own events.
+5. The renderer receives success or a revision conflict; failures remain visible instead of being silently discarded.
 
-Kanwas treats the agent as an eventful runtime, not a single API call.
+During shutdown, Electron asks the renderer to flush queued note saves and waits for at most five seconds. The runtime then flushes mounts before closing rooms, terminals, watchers, and the server.
 
-## Invocation lifecycle stages
+### Editing outside Kanwas
 
-1. Intake and validation.
-2. Context loading and prompt assembly.
-3. Tool-capable reasoning loop.
-4. Streaming event publication.
-5. Completion/failure finalization and persistence.
+1. The watcher observes a create, update, move, or delete under a mounted vault.
+2. Paths are validated and normalized to vault-relative POSIX form.
+3. The synchronization layer parses the changed file and reconciles `metadata.yaml` when necessary.
+4. The runtime applies one transaction to the corresponding Yjs document.
+5. The renderer updates through its existing Yjs subscription.
 
-## Capabilities exposed to the agent
+External-change handling must distinguish a real external edit from the runtime's atomic-write sequence and must preserve both sides when revisions conflict.
 
-- Shell-style execution in sandbox.
-- Structured text/file editing operations.
-- Subagent delegation for specialized tasks.
-- Integration-backed actions when external tools are authorized.
+### Terminal and agent context
 
-## Why this matters
+The runtime spawns PTYs with the selected vault as their working directory. macOS uses the user's login-shell environment; Windows resolves PowerShell or `%ComSpec%` and command shims through `PATHEXT`.
 
-- Users can see what happened, not just that something happened.
-- Platform can apply policy and limits around execution.
-- System can preserve a reliable timeline for auditing and debugging.
+The renderer reports selected files and ranges to an in-memory UI-context store. Any terminal can receive explicit context as inserted text. MCP-capable local agents can read the same context through the loopback `/mcp` endpoint.
 
----
+No command is sent to a hosted agent service.
 
-## Sandboxed execution model
+## Local API surface
 
-The sandbox is intentionally isolated and disposable, but synchronized.
+The renderer uses typed, same-origin endpoints for:
 
-## Design goals
+- workspace lookup and Yjs token minting,
+- note saves and conflict responses,
+- uploads and raw files,
+- terminal discovery, session lifecycle, and attachment,
+- UI-context reporting and resolution,
+- validated link metadata,
+- read-only MCP tools.
 
-- Safety: autonomous actions do not run directly on production hosts.
-- Fidelity: agent gets a real filesystem and command execution environment.
-- Continuity: changes are reflected back into collaborative workspace state.
+Unsupported paths and methods return explicit `404` or `405` responses. The old hosted API surface is not emulated.
 
-## Sync responsibilities
+## Security boundary
 
-- Detect local filesystem mutations.
-- Map them into workspace-native structures.
-- Handle generated metadata updates automatically.
-- Accept inbound workspace changes and materialize them back to files.
+- The runtime listens only on loopback.
+- Browser API requests are same-origin and cross-origin requests are rejected.
+- The renderer has no raw Node, filesystem, or IPC access.
+- Folder selection and vault mutations happen in Electron main.
+- Resolved paths must stay beneath the mounted vault, including through symlinks.
+- Link previews reject loopback, private, link-local, metadata-service, and unsafe redirect targets; response size and media signatures are validated.
+- Navigation is restricted to the runtime origin. External URLs open outside Electron.
+- Core startup does not require outbound network access.
 
-This bridge is a key differentiator because it supports both visual collaboration and code-like automation.
+The MCP endpoint is intentionally available to local command-line tools. Its tools expose current Kanwas context but do not create a general remote-control API.
 
----
+## Cross-platform rules
 
-## Event-driven orchestration
+Workspace-relative paths are canonical `/`-separated strings. Native absolute paths remain at the filesystem and PTY boundaries.
 
-Kanwas uses events/listeners/background workers to keep interactive paths fast.
+Windows support requires explicit handling for drive letters, UNC paths, case-insensitive vault equivalence, reserved names, `.cmd` shims, ConPTY, and replace-on-rename behavior. macOS and Windows tests must use native runners for PTY behavior.
 
-Typical event outcomes:
+## Persistence and recovery
 
-- coordinate follow-up automation after content changes,
-- stream invocation progress to subscribed clients.
+The vault folder contains content and canvas metadata. The registry under `userData` contains only remembered-vault application state. If the new registry does not exist, the runtime may import legacy `~/.kanwas/vaults.json` once; it does not edit or delete that legacy file.
 
-Benefits:
+A missing remembered folder is reported as unavailable and can be forgotten safely. Runtime startup and `close()` are designed to be idempotent so partial startup failures and normal application quit use the same cleanup path.
 
-- decoupled services,
-- lower UI latency,
-- easier operational scaling and failure isolation.
+## Development and release boundary
 
----
+Source development builds the renderer before Electron starts and runs the runtime inside Electron's main process. There is no first-run Vite build and no dependency on a repository checkout from the running app.
 
-## Workspace context and retrieval
-
-Kanwas keeps current workspace state and agent-visible context connected:
-
-- active collaboration state stays available in real time,
-- agent context assembly pulls the relevant workspace structure into each run.
-
-Practical value:
-
-- agent runs stay grounded in the current workspace structure,
-- teams can navigate complex projects through shared context.
-
----
-
-## Deep research function
-
-For broader internet-scale tasks, Kanwas can orchestrate long-running research executions:
-
-- submit external research job,
-- stream intermediate status,
-- deliver structured outputs back into workspace artifacts.
-
-This extends the agent from local edits to strategic analysis workflows.
-
----
-
-## Security and multi-tenant access
-
-Security is integrated into functional boundaries:
-
-- org-scoped data ownership,
-- role/membership-based authorization,
-- invite-based onboarding flows,
-- isolated execution environments for tool runs,
-- controlled integration authorization for external systems.
-
-The goal is collaborative openness inside a workspace with strict tenant isolation across workspaces.
-
----
-
-## Reliability and recovery patterns
-
-Kanwas favors graceful recovery over brittle assumptions:
-
-- stream state so failures are visible,
-- decouple heavy processing from interactive edits.
-
-This makes the system more resilient under both human and agent mistakes.
-
----
-
-## Performance strategy
-
-Performance is addressed at multiple layers:
-
-- UI rerender control for large canvases,
-- transaction-based collaborative updates,
-- background processing for expensive tasks,
-- selective event fanout by workspace rooms,
-- asynchronous orchestration for background pipelines.
-
-It is designed to feel responsive while still doing complex distributed work.
-
----
-
-## Extensibility model
-
-Kanwas is built to grow through composable capability layers:
-
-- shared type/contracts to reduce drift,
-- skill system to shape assistant behavior,
-- subagent model for specialization,
-- integration providers for external actions,
-- event hooks for adding new automation workflows.
-
-This allows incremental expansion without re-architecting the core collaboration loop.
-
----
-
-## What is most technically unique
-
-## 1) CRDT-first + filesystem mirror
-
-Most systems are either document-collaboration-first or code-execution-first. Kanwas combines both by keeping CRDT state canonical while maintaining a live filesystem mirror for agent tooling.
-
-## 2) Human and agent on one shared timeline
-
-The agent does not operate in a hidden background silo. Its actions are streamed as user-visible events and merged into the same workspace graph.
-
-## 3) Product-native observability
-
-Execution visibility is part of UX, not an operator-only feature. Users can understand progress, diagnose stuck states, and make informed interventions.
-
-## 4) Unified workspace memory
-
-Live state and execution context are connected. Teams can move fluidly between editing and inspecting.
-
----
-
-## Example scenarios this architecture enables
-
-## Scenario 1: Brainstorm to implementation
-
-- Team maps ideas on the canvas.
-- Agent turns selected nodes into draft artifacts.
-- Artifacts appear immediately for collaborative review.
-- Team iterates collaboratively.
-
-## Scenario 2: Knowledge-heavy project onboarding
-
-- Existing workspace structure captures prior decisions.
-- New member or agent inspects current artifacts and recent changes.
-- Shared context accelerates ramp-up and reduces duplicate work.
-
-## Scenario 3: Research-backed planning
-
-- Team runs long-form research tasks externally.
-- Progress streams into workspace.
-- Findings become structured inputs to subsequent agent tasks.
-
----
-
-## Design tradeoffs (intentional)
-
-- CRDT-centric systems are powerful but add complexity in serialization, identity, and undo semantics.
-- Bi-directional filesystem sync unlocks agent tooling but requires careful conflict handling.
-- Event-driven background workflows improve UX responsiveness but require robust operational monitoring.
-- Rich observability increases transparency but raises implementation complexity in timeline/state management.
-
-These tradeoffs are deliberate and aligned with the product goal: safe, collaborative, AI-augmented project execution.
-
----
-
-## Practical contributor mental model
-
-When adding a feature, reason through these questions:
-
-1. What collaborative state changes are primary?
-2. What projections of that state are required (UI, execution, indexing)?
-3. Which changes are user-undoable vs system-maintenance?
-4. What safety boundary is required (validation, isolation)?
-5. What events should be emitted for downstream workflows?
-
-If a change is coherent across those dimensions, it will usually integrate cleanly.
-
----
-
-## Bottom line
-
-Kanwas is best understood as a collaborative execution substrate:
-
-- live shared state for people,
-- autonomous tool use for agents,
-- event-driven orchestration for system intelligence,
-- and durable memory for trust and continuity.
-
-That combination is what makes it both technically distinctive and practically useful for real team workflows.
-
----
-
-## Repository layout
-
-Kanwas is a pnpm monorepo.
-
-| Package       | Description                                                                 |
-| ------------- | --------------------------------------------------------------------------- |
-| `frontend/`   | React + TypeScript + Vite app — canvas, docs, chat                          |
-| `backend/`    | AdonisJS API server — auth, orgs, agent orchestration, workflow services    |
-| `yjs-server/` | Real-time collaboration server (Yjs rooms, WebSockets)                      |
-| `shared/`     | Shared types and utilities (workspace types, content converter, path utils) |
-| `execenv/`    | Runs inside the sandbox; bi-directional sync between filesystem and yDoc    |
-| `cli/`        | `kanwas init/pull/push` — CLI with browser-based OAuth                      |
-
-## Tech stack
-
-- **Frontend:** React, TypeScript, Vite, TanStack Router, BlockNote, Yjs
-- **Backend:** AdonisJS, Lucid ORM
-- **Realtime:** Yjs + WebSockets
-- **Storage:** PostgreSQL, Redis
-- **Sandbox:** E2B (cloud) / Docker (local)
-- **Agent:** Claude, with tool-use loop and streaming events
-
----
-
-## Development
-
-The Quickstart in the [README](../README.md) runs the full stack via Docker Compose. For day-to-day development, hot reload is much faster if you run the service you're changing locally and keep everything else in containers.
-
-### Prerequisites
-
-- Node.js 20+, pnpm 9+
-- Docker + Docker Compose
-
-### Hybrid mode (recommended for development)
-
-Run infrastructure and the services you're not editing in Docker; run the service you're editing locally with `pnpm dev`.
-
-```bash
-pnpm install
-
-# Env files (one-time)
-cp backend/.env.example backend/.env          # add ANTHROPIC_API_KEY, APP_KEY, etc.
-cp yjs-server/.env.example yjs-server/.env
-cp frontend/.env.example frontend/.env
-
-# Example: developing the backend — run everything else in Docker
-docker-compose --profile backend up -d
-cd backend && pnpm run migrate && pnpm dev    # http://localhost:3333
-```
-
-The `backend`, `frontend`, and `yjs-server` profiles each start the dependencies for that service. Swap which service runs locally by stopping its container (`docker-compose stop backend`) and running `pnpm dev` in its directory.
-
-Other services and ports:
-
-- `cd yjs-server && pnpm dev` — `ws://localhost:1999`
-- `cd frontend && pnpm dev` — `http://localhost:5173`
-
-### Shared package
-
-After editing `shared/src/`, rebuild before other packages pick up the changes:
-
-```bash
-pnpm --filter shared build
-```
-
-This is especially important for `execenv` and `backend`, which import the built `shared/dist/` output.
-
-### Tests
-
-```bash
-cd backend && pnpm test
-cd frontend && pnpm test
-```
+Installer generation, signing, notarization, auto-update, and release artifact architecture are a later electron-builder phase. Development correctness must not depend on those packaging decisions.

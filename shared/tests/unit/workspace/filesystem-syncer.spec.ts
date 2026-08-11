@@ -216,7 +216,7 @@ describe('FilesystemSyncer', () => {
       const canvas = await createTestCanvas(setup, 'New-Canvas')
       expect(rootCanvasCount()).toBe(1)
 
-      // Re-observing the SAME directory (as the daemon does when its own flusher
+      // Re-observing the SAME directory (as the runtime does when its own flusher
       // mkdir's the folder for a UI-created canvas) must no-op, not duplicate.
       const echo = await setup.syncer.syncChange({ type: 'create', path: 'New-Canvas' })
       expect(echo.action).toBe('no_op')
@@ -290,7 +290,7 @@ describe('FilesystemSyncer', () => {
   })
 
   describe('section placement', () => {
-    it('marks unsectioned filesystem-created Markdown, URL, text, and sticky nodes for frontend placement', async () => {
+    it('marks unsectioned filesystem-created Markdown, URL, text, and sticky nodes for renderer placement', async () => {
       const setup = createTestSyncer()
       disposeCallbacks.push(setup.dispose)
 
@@ -755,7 +755,7 @@ describe('FilesystemSyncer', () => {
       expect(childCanvas.items.some((i) => i.id === result.nodeId)).toBe(true)
     })
 
-    it('should leave new nodes unresolved for frontend placement', async () => {
+    it('should leave new nodes unresolved for renderer placement', async () => {
       const setup = createTestSyncer()
       disposeCallbacks.push(setup.dispose)
 
@@ -2065,7 +2065,7 @@ describe('FilesystemSyncer', () => {
     it('is a no-op regardless of directoryExists when the path already maps to a canvas (idempotent create)', async () => {
       // The idempotent-mapping check runs BEFORE the directoryExists guard, so an
       // already-known canvas path stays a harmless no-op even if directoryExists
-      // later flips to false (e.g. a duplicate `addDir` echo of the daemon's own
+      // later flips to false (e.g. a duplicate `addDir` echo of the runtime's own
       // structural reconcile, which always mkdirs before this event fires).
       let exists = true
       const setup = createTestSyncer({ directoryExists: () => exists })

@@ -1,0 +1,45 @@
+name: Local runtime checks
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'local-runtime/**'
+      - 'yjs-core/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/test-local-runtime.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'local-runtime/**'
+      - 'yjs-core/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/test-local-runtime.yml'
+
+jobs:
+  test:
+    name: Typecheck, test, and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
+
+      - run: pnpm install --frozen-lockfile --filter @kanwas/local-runtime...
+      - run: pnpm --filter shared build
+      - run: pnpm --filter @kanwas/yjs-core build
+      - run: pnpm --filter @kanwas/local-runtime typecheck
+      - run: pnpm --filter @kanwas/local-runtime test
+      - run: pnpm --filter @kanwas/local-runtime build

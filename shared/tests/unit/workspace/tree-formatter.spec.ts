@@ -126,7 +126,7 @@ describe('tree formatter', () => {
     )
   })
 
-  it('builds frontend invoke context from one workspace snapshot', () => {
+  it('builds renderer invoke context from one workspace snapshot', () => {
     const canvas = createCanvas('canvas-1', 'Context', [
       createTextNode('node-1', 'Selected', {
         audit: {

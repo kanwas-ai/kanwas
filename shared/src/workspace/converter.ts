@@ -167,7 +167,7 @@ async function parseBinaryNode(
   log?: Logger
 ): Promise<Buffer> {
   if (!fileFetcher) {
-    // Fallback for contexts without fetcher (tests, backend-only)
+    // Fallback for contexts without a file fetcher (including unit tests)
     return Buffer.from(`# Binary file: ${nodeId}\n\nStorage path: ${storagePath}\n`)
   }
 

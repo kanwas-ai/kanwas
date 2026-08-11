@@ -13,20 +13,27 @@ import type { CanvasItem } from './types.js'
  * deduplicate via makeUniqueName so the constant is safe as a fallback.
  */
 export function sanitizeFilename(name: string): string {
-  const sanitized = name
+  let sanitized = name
     .toLowerCase() // Enforce lower-kebab-case
     .replace(/[<>:"/\\|?*]/g, '-') // Replace invalid chars with dash
     .replace(/\s+/g, '-') // Replace whitespace with dash
     .replace(/-+/g, '-') // Collapse multiple dashes
     .replace(/^-|-$/g, '') // Remove leading/trailing dashes
     .trim()
+  // Keep generated names valid when a vault is moved between macOS and
+  // Windows. Windows rejects trailing dots/spaces and reserved DOS devices.
+  sanitized = sanitized.replace(/[. ]+$/g, '')
+  const stem = sanitized.split('.')[0]?.toUpperCase()
+  if (stem && /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/.test(stem)) {
+    sanitized = `_${sanitized}`
+  }
   if (sanitized === '' || /^\.+$/.test(sanitized)) return 'untitled'
   return sanitized
 }
 
 /**
  * Node layout constants for canvas positioning
- * Used by frontend, backend, and execenv for consistent node placement
+ * Used by the renderer and local runtime for consistent node placement
  */
 export const NODE_LAYOUT = {
   /** Default width for blockNote nodes */
@@ -409,7 +416,7 @@ export function isFileExtension(ext: string): ext is SupportedFileExtension {
 
 /**
  * Map from file extension to icon filename (without .png extension)
- * Used by frontend to load PNG icons from assets/files/
+ * Used by the renderer to load PNG icons from assets/files/
  */
 export const FILE_ICON_MAP: Record<string, string> = {
   // Documents

@@ -3,7 +3,7 @@
  * Consumers pass in their logger instance; shared utilities use this interface.
  *
  * This design allows:
- * - Dependency injection from callers (execenv passes pino, backend passes AdonisJS logger)
+ * - Dependency injection from desktop callers
  * - Graceful degradation with noopLogger when no logger is provided
  * - Child logger support for context propagation (correlationId, workspaceId, etc.)
  */

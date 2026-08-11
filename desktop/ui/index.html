@@ -112,27 +112,6 @@
         overflow-y: auto;
         width: 100%;
       }
-
-      button.pick-folder {
-        display: none;
-        appearance: none;
-        border: 1px solid rgba(236, 233, 230, 0.2);
-        background: rgba(236, 233, 230, 0.08);
-        color: #f4f1ec;
-        font-size: 13px;
-        font-weight: 500;
-        padding: 9px 18px;
-        border-radius: 7px;
-        cursor: pointer;
-      }
-
-      button.pick-folder:hover {
-        background: rgba(236, 233, 230, 0.14);
-      }
-
-      button.pick-folder.visible {
-        display: inline-block;
-      }
     </style>
   </head>
   <body>
@@ -140,10 +119,9 @@
     <div class="stage">
       <div class="wordmark">Kanwas</div>
       <div class="spinner" id="spinner"></div>
-      <div class="status" id="status">Looking for a running Kanwas daemon…</div>
+      <div class="status" id="status">Starting Kanwas…</div>
       <div class="error-panel" id="error-panel">
         <div class="error-message" id="error-message"></div>
-        <button class="pick-folder" id="pick-folder">Choose Folder…</button>
       </div>
     </div>
     <script>
@@ -151,7 +129,6 @@
       const statusEl = document.getElementById('status')
       const errorPanelEl = document.getElementById('error-panel')
       const errorMessageEl = document.getElementById('error-message')
-      const pickFolderEl = document.getElementById('pick-folder')
 
       function applyStatus(payload) {
         statusEl.textContent = payload.message || ''
@@ -160,7 +137,6 @@
           spinnerEl.style.display = 'none'
           errorPanelEl.classList.add('visible')
           errorMessageEl.textContent = payload.message || 'Something went wrong.'
-          pickFolderEl.classList.toggle('visible', !!payload.showPicker)
         } else {
           spinnerEl.style.display = 'block'
           errorPanelEl.classList.remove('visible')
@@ -168,11 +144,6 @@
       }
 
       window.kanwas.onStatus(applyStatus)
-
-      pickFolderEl.addEventListener('click', () => {
-        applyStatus({ state: 'starting', message: 'Waiting for folder selection…', showPicker: false })
-        window.kanwas.pickFolder()
-      })
 
       // The main process's bootstrap run may emit a status before this
       // listener is attached — announce readiness so it can replay the

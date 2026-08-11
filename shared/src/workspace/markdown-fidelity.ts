@@ -1,5 +1,5 @@
 // Browser-safe markdown fidelity utilities: pure functions over strings/JSON only.
-// No `@blocknote/server-util`, no Node built-ins — this module must be importable from the frontend.
+// No `@blocknote/server-util`, no Node built-ins — this module must be importable from the renderer.
 //
 // These functions harden the markdown <-> BlockNote round trip against two verified defects:
 //   1. BlockNote's markdown parser silently drops inline HTML-like tokens (e.g. `<topic>`).

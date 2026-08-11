@@ -5,6 +5,10 @@
   "packageManager": "pnpm@10.18.3",
   "scripts": {
     "prepare": "husky",
+    "dev": "pnpm --filter @kanwas/desktop dev",
+    "build": "pnpm --filter @kanwas/desktop build",
+    "test": "pnpm --filter shared test && pnpm --filter @kanwas/yjs-core test && pnpm --filter @kanwas/local-runtime test && pnpm --filter @kanwas/renderer test",
+    "build:website": "pnpm --filter website build",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\""
   },
   "devDependencies": {
@@ -13,19 +17,18 @@
     "prettier": "^3.5.3"
   },
   "lint-staged": {
-    "!(backend/.adonisjs)/**/*.{ts,tsx,js,jsx,json,md,yml,yaml}": [
+    "**/*.{ts,tsx,js,jsx,json,md,yml,yaml}": [
       "pnpm exec prettier --write"
     ],
-    "backend/!(.adonisjs)/**/*.{ts,js}": [
-      "pnpm --filter backend run lint --fix"
-    ],
-    "frontend/**/*.{ts,tsx,js,jsx}": [
-      "pnpm --filter frontend run lint --fix"
+    "renderer/**/*.{ts,tsx,js,jsx}": [
+      "pnpm --filter @kanwas/renderer run lint --fix"
     ]
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "electron"
+      "electron",
+      "esbuild",
+      "node-pty"
     ],
     "patchedDependencies": {
       "@blocknote/core@0.46.0": "patches/@blocknote__core@0.46.0.patch"

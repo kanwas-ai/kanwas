@@ -34,10 +34,6 @@
       "types": "./dist/workspace/workspace-sync-types.d.ts",
       "default": "./dist/workspace/workspace-sync-types.js"
     },
-    "./document-share": {
-      "types": "./dist/document-share.d.ts",
-      "default": "./dist/document-share.js"
-    },
     "./server": {
       "types": "./dist/server.d.ts",
       "default": "./dist/server.js"
@@ -62,13 +58,9 @@
       "types": "./dist/workspace/canvas-tree.d.ts",
       "default": "./dist/workspace/canvas-tree.js"
     },
-    "./skills": {
-      "types": "./dist/skills/index.d.ts",
-      "default": "./dist/skills/index.js"
-    },
-    "./llm-config": {
-      "types": "./dist/llm-config.d.ts",
-      "default": "./dist/llm-config.js"
+    "./local-api": {
+      "types": "./dist/local-api.d.ts",
+      "default": "./dist/local-api.js"
     }
   },
   "scripts": {
@@ -93,15 +85,13 @@
     "valtio-y": "https://github.com/Ryner01/valtio-y/releases/download/v1.1.4/valtio-y-1.1.4.tgz",
     "y-protocols": "^1.0.6",
     "yaml": "^2.8.1",
-    "yjs": "^13.6.27",
-    "zod": "^3.25.0"
+    "yjs": "^13.6.27"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
     "@types/pngjs": "^6.0.5",
     "typescript": "~5.7.3",
-    "vitest": "^4.0.13",
-    "ws": "^8.18.0"
+    "vitest": "^4.0.13"
   },
   "peerDependencies": {
     "@xyflow/react": "^12.8.5"

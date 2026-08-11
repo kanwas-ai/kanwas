@@ -238,19 +238,19 @@ describe('WorkspaceSocketProvider URL normalization', () => {
   })
 
   it('uses https for non-local hosts by default', () => {
-    const provider = new WorkspaceSocketProvider('yjs.kanwas.ai', 'workspace-1', new Y.Doc(), { connect: false })
+    const provider = new WorkspaceSocketProvider('sync.example.test', 'workspace-1', new Y.Doc(), { connect: false })
 
-    expect(provider.url).toBe('https://yjs.kanwas.ai')
+    expect(provider.url).toBe('https://sync.example.test')
 
     provider.destroy()
   })
 
   it('respects an explicit websocket scheme in the configured host', () => {
-    const provider = new WorkspaceSocketProvider('wss://staging-yjs.kanwas.ai', 'workspace-1', new Y.Doc(), {
+    const provider = new WorkspaceSocketProvider('wss://sync.example.test', 'workspace-1', new Y.Doc(), {
       connect: false,
     })
 
-    expect(provider.url).toBe('https://staging-yjs.kanwas.ai')
+    expect(provider.url).toBe('https://sync.example.test')
 
     provider.destroy()
   })
@@ -258,11 +258,11 @@ describe('WorkspaceSocketProvider URL normalization', () => {
   it('uses http for non-local hosts when the page itself is served over http', () => {
     ;(globalThis as { location?: { protocol: string } }).location = { protocol: 'http:' }
 
-    const provider = new WorkspaceSocketProvider('staging-yjs.kanwas.ai', 'workspace-1', new Y.Doc(), {
+    const provider = new WorkspaceSocketProvider('sync.example.test', 'workspace-1', new Y.Doc(), {
       connect: false,
     })
 
-    expect(provider.url).toBe('http://staging-yjs.kanwas.ai')
+    expect(provider.url).toBe('http://sync.example.test')
 
     provider.destroy()
   })

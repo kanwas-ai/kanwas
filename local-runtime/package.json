@@ -1,0 +1,45 @@
+{
+  "name": "@kanwas/local-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Electron-owned local filesystem, sync, API, MCP, and terminal runtime",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@kanwas/yjs-core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "chokidar": "^4.0.3",
+    "node-pty": "^1.1.0",
+    "pino": "^10.1.0",
+    "shared": "workspace:*",
+    "undici": "^7.16.0",
+    "valtio": "2.2.0",
+    "valtio-y": "https://github.com/Ryner01/valtio-y/releases/download/v1.1.4/valtio-y-1.1.4.tgz",
+    "ws": "^8.18.0",
+    "yaml": "^2.8.1",
+    "yjs": "^13.6.27",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^22.19.0",
+    "@types/ws": "^8.5.10",
+    "pino-pretty": "^13.1.2",
+    "tsx": "^4.21.0",
+    "typescript": "~5.7.3",
+    "vitest": "^4.0.13"
+  }
+}

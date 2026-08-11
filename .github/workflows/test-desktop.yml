@@ -1,0 +1,52 @@
+name: Desktop source checks
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'desktop/**'
+      - 'local-runtime/**'
+      - 'renderer/**'
+      - 'yjs-core/**'
+      - 'shared/**'
+      - 'patches/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/test-desktop.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'desktop/**'
+      - 'local-runtime/**'
+      - 'renderer/**'
+      - 'yjs-core/**'
+      - 'shared/**'
+      - 'patches/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/test-desktop.yml'
+
+jobs:
+  check:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
+
+      - run: pnpm install --frozen-lockfile --filter @kanwas/desktop... --filter @kanwas/renderer...
+      - run: pnpm --filter @kanwas/desktop check
+      - run: pnpm --filter @kanwas/local-runtime test

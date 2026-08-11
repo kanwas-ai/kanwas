@@ -1,4 +1,4 @@
-// Browser-safe path mapper export for frontend/runtime usage.
+// Browser-safe path mapper export for renderer/runtime usage.
 // Intentionally excludes server-only utilities like ContentConverter.
 
 export { PathMapper, makeUniqueName } from './workspace/path-mapper.js'

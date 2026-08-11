@@ -7,8 +7,3 @@ coverage
 *.min.js
 *.min.css
 pnpm-lock.yaml
-
-**/**/.adonisjs/api.ts
-**/**/.adonisjs/index.ts
-**/ace.js
-frontend/src/lib/valtio-yjs

@@ -1,130 +1,98 @@
 <p align="center">
-  <a href="https://kanwas.ai/" target="_blank">
-    <img src="./docs/images/logo.png" alt="Kanwas" height="80" />
-  </a>
+  <img src="./docs/images/logo.png" alt="Kanwas" height="80" />
 </p>
 <p align="center">
-  Shared context board for teams and agents
-</p>
-<p align="center">
-  Try Kanwas for free at <a href="https://kanwas.ai/">kanwas.ai</a>
+  A local-first canvas for the folders and tools you already use.
 </p>
 
-# What's Kanwas?
+# Kanwas
 
-Kanwas is a multiplayer workspace for AI work. Teams and an AI agent share the same documents, evidence, and decisions, with the agent's tool calls streaming into the same timeline everyone sees.
+Kanwas is an Electron desktop app that turns a local folder into a visual canvas. Files remain ordinary files on disk, so editors, Git, Claude Code, Codex, and other local tools can work with the same material shown in Kanwas.
 
 ![Kanwas canvas](./docs/images/hero.webp)
 
-## Who it's for
+## What local-first means
 
-- **Founders.** Turn a fundraising deck, customer interviews, MVP spec, and hiring plan into one canvas where the agent helps across all of them. Less context to keep in your head, more output across many fronts.
-- **Product managers.** Drop interview snippets, tickets, and competitor screenshots on a board; get a discovery readout and a PRD with every claim traceable to its source.
-- **Developers.** Pull a PM's spec, designs, and research onto a canvas; work with the agent to turn it into an implementation plan with tasks and acceptance criteria. Then `kanwas pull` the markdown into your repo and hand it to Claude Code, Codex, or whatever coding agent you use.
-- **Marketers.** Plan a launch with positioning, messaging, asset list, and timeline. The agent drafts copy variants you can compare side-by-side and iterate on with the team.
-- **Sales.** A reusable account board: research, comms history, stakeholder map, and proposal drafts. Each deal makes the template better.
+- **Your folder is the source of truth.** Markdown, media, and directories stay in a folder you choose.
+- **The desktop app is the product.** There is no hosted application server, account, organization, or cloud workspace requirement.
+- **Canvas state stays beside the content.** Kanwas records layout and relationships in `metadata.yaml` files without hiding the underlying documents.
+- **External edits are live.** Files changed by an editor or coding agent are reflected back into the canvas.
+- **Local agents remain independent.** The embedded terminal and MCP endpoint let your existing CLI agents use Kanwas context without a built-in cloud agent.
 
-## Why teams use it
+## Architecture
 
-- **Shared context that compounds.** Every decision and outcome makes the next board better than the last.
-- **Canvas + agent on one surface.** Work alongside AI over the same evidence, ideas, and trade-offs — transparent to everyone.
-- **Sharp deliverables in minutes.** Generate structured, execution-ready artifacts for every stage of the work.
-- **Your files, your repo.** Git-backed markdown filesystem with full version history. No vendor lock-in.
+Kanwas runs as one Electron application:
 
-## Quickstart
+```text
+Electron main process
+  ├─ local-runtime
+  │    ├─ folder watcher and persistence
+  │    ├─ local REST, terminal WebSocket, and MCP endpoints
+  │    └─ yjs-core rooms on the same loopback server
+  └─ renderer (React, Vite, React Flow, BlockNote)
+          ↕
+      selected local folder
+```
+
+The loopback server is an internal transport between Electron's renderer and main process. It is private to the app and closes with it.
+
+Yjs keeps the canvas and rich-text editor responsive and transaction-safe while the app is running. The local runtime persists those changes to the selected folder; Yjs is not a cloud database.
+
+See [the system overview](./docs/SYSTEM_OVERVIEW.md) for the data flow and package responsibilities.
+
+## Repository layout
+
+| Package          | Responsibility                                                 |
+| ---------------- | -------------------------------------------------------------- |
+| `desktop/`       | Electron main process and preload bridge                       |
+| `renderer/`      | React/Vite desktop user interface                              |
+| `local-runtime/` | Embedded folder, API, terminal, and MCP runtime                |
+| `yjs-core/`      | Realtime Yjs room and protocol primitives                      |
+| `shared/`        | Shared workspace, filesystem, and API types/utilities          |
+| `website/`       | Independent marketing website; not part of the desktop runtime |
+
+## Development
 
 ### Prerequisites
 
-- Docker + Docker Compose
-- An Anthropic API key (and/or OpenAI API key)
+- Node.js 22 or newer
+- pnpm 10
+- macOS or Windows
 
-### Run it
-
-```bash
-git clone https://github.com/kanwas-ai/kanwas.git
-cd kanwas
-
-# Env files — fill in API keys, APP_KEY, etc.
-cp .env.example .env
-cp backend/.env.example backend/.env
-cp yjs-server/.env.example yjs-server/.env
-cp frontend/.env.example frontend/.env
-
-docker-compose --profile app up
-```
-
-Open http://localhost:5173 and you're in.
-
-For local development (hot reload, running services with `pnpm dev`) and the architectural walkthrough, see [`docs/SYSTEM_OVERVIEW.md`](./docs/SYSTEM_OVERVIEW.md).
-
-## CLI
-
-`kanwas` is a command-line tool for syncing a workspace with your local filesystem. Useful when you want to edit notes in your editor of choice, bulk-import markdown you already have on disk, or script workspace access from CI or another agent.
-
-### Install
+Install dependencies and start Electron:
 
 ```bash
-npm install -g @kanwas/cli
+pnpm install
+pnpm --filter @kanwas/desktop dev
 ```
 
-### Authenticate
+The development task builds the packages needed by Electron. It does not start any separate service.
+
+Run package checks with their workspace scripts:
 
 ```bash
-kanwas login
+pnpm --filter shared test
+pnpm --filter @kanwas/yjs-core test
+pnpm --filter @kanwas/local-runtime test
+pnpm --filter @kanwas/renderer test
+pnpm --filter @kanwas/desktop check
 ```
 
-Opens a browser tab to authorize the CLI. Auth is stored globally in `~/.kanwas/config.json`.
+Release installers, signing, notarization, and auto-update are intentionally deferred. The current repository supports source development of the app; a later electron-builder phase will own distributable artifacts.
 
-### Edit a workspace locally
+## Files on disk
 
-```bash
-mkdir my-workspace && cd my-workspace
-kanwas pull            # interactive picker, downloads files into the current directory
-# ...edit files in your editor...
-kanwas push            # uploads local changes back to the workspace
-```
+Kanwas maps directories to canvases and supported files to nodes. `metadata.yaml` stores spatial information such as positions, edges, groups, and stable IDs. Markdown remains readable and editable without Kanwas.
 
-After the first `pull`, the directory is bound to that workspace via `.kanwas.json`. Subsequent `pull` / `push` reuse it automatically.
-
-### Import markdown from disk
-
-```bash
-kanwas import ./notes                       # interactive workspace picker
-kanwas import ./notes --name "My Workspace" # non-interactive, by name
-kanwas import ./intro.md --id <uuid>        # single file, by ID
-kanwas import ./notes --dest research       # place imports under a subfolder
-kanwas import ./notes --overwrite           # replace files that already exist
-```
-
-Walks the source path, picks up every `.md` file (other files are skipped), preserves directory structure, and creates them in the target workspace.
-
-### List / script
-
-```bash
-kanwas workspaces             # list workspaces
-kanwas workspaces --json      # JSON output for scripting
-kanwas pull --id <uuid>       # non-interactive: pin to a specific workspace
-kanwas pull --name "<name>"   # non-interactive: by exact name
-```
-
-All commands accept `--id` or `--name` to skip the interactive picker, which makes them safe to use from CI or wrapping agents.
-
-Source: [`cli/`](./cli) · npm: [`@kanwas/cli`](https://www.npmjs.com/package/@kanwas/cli)
-
-## Community
-
-Questions, ideas, want to chat with the team?
-
-- 💬 [Kanwas Kollective on Slack](https://join.slack.com/t/kanwaskollective/shared_invite/zt-3vsln4mro-omqBG1gi1Kmc9fgzTHL7oQ)
+When both the UI and another program edit the same file, the runtime uses revision checks and merge/conflict handling rather than silently overwriting either side. Atomic writes and watcher suppression prevent Kanwas from treating its own persistence as an external edit.
 
 ## Contributing
 
-We'd love help. A few notes:
-
-- Read [`docs/SYSTEM_OVERVIEW.md`](./docs/SYSTEM_OVERVIEW.md) for the mental model and project-specific gotchas (especially around Yjs/BlockNote — clone semantics and transactions matter).
-- Open an issue before large changes so we can align on direction.
-- Run `pnpm format` and the relevant package's lint before opening a PR.
-- First-time contributors will be asked to sign our [Contributor License Agreement](./.github/CLA.md). The CLA bot will comment on your PR with a link and the signing phrase — you only need to sign once.
+- Read [the system overview](./docs/SYSTEM_OVERVIEW.md) before changing synchronization or Yjs code.
+- Run the checks for every package you modify.
+- Keep `website/` independent of desktop runtime packages.
+- Open an issue before a large product change so the direction can be discussed first.
+- First-time contributors will be asked to sign the [Contributor License Agreement](./.github/CLA.md).
 
 ## License
 
@@ -132,4 +100,4 @@ Kanwas is licensed under the [Apache License 2.0](./LICENSE).
 
 ## Acknowledgements
 
-Kanwas stands on the shoulders of [Yjs](https://github.com/yjs/yjs), [BlockNote](https://www.blocknotejs.org/), [AdonisJS](https://adonisjs.com/), [E2B](https://e2b.dev/), and many other great open-source projects.
+Kanwas builds on [Electron](https://www.electronjs.org/), [Yjs](https://github.com/yjs/yjs), [BlockNote](https://www.blocknotejs.org/), React Flow, and the broader open-source ecosystem.

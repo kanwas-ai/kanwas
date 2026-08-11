@@ -1,0 +1,41 @@
+name: Yjs core checks
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'shared/**'
+      - 'yjs-core/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/test-yjs-core.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'shared/**'
+      - 'yjs-core/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/test-yjs-core.yml'
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
+
+      - run: pnpm install --frozen-lockfile --filter @kanwas/yjs-core...
+      - run: pnpm --filter shared build
+      - run: pnpm --filter @kanwas/yjs-core test
+      - run: pnpm --filter @kanwas/yjs-core build

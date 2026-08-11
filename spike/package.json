@@ -1,6 +1,0 @@
-{
-  "name": "kanwas-spike",
-  "private": true,
-  "type": "module",
-  "description": "Local-first Step 0 spike. Untracked. Not part of the pnpm workspace."
-}

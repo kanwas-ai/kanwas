@@ -1,53 +1,93 @@
-# desktop
+# Kanwas desktop
 
-A thin **Electron** shell over `kanwasd`, the local-first daemon in
-`local-daemon`. No renderer-side app logic, no bundled frontend of its own —
-the shell just makes sure a daemon is running and then points its window at
-it.
+`@kanwas/desktop` is the Electron application shell. It starts the local runtime
+inside Electron's main process, loads the prebuilt renderer, and owns the
+runtime for the lifetime of the window. No system Node executable, repository
+discovery, child process, login page, or separately started service is involved.
 
-## What it does on launch
+## Launch flow
 
-1. **probes** `http://127.0.0.1:4300/auth/me` to see if a `kanwasd` is
-   already running.
-2. if none is running, **picks a folder**: the most recently opened vault
-   from `~/.kanwas/vaults.json`, or a native folder picker on first run.
-3. **spawns** `node <repo>/local-daemon/dist/cli.js up --no-open <folder>` —
-   this builds the frontend web bundle on first use (~1 min, instant after)
-   and boots the daemon on the fixed ports.
-4. **navigates** the window to `http://127.0.0.1:4300/local-login`, which
-   sets the auth token on its own origin and redirects into the canvas.
+1. Electron acquires the single-instance lock and creates a sandboxed loading
+   window.
+2. Main calls `startLocalRuntime()` with Electron's `userData` and log paths,
+   the renderer build, and the bundled vault templates.
+3. The runtime remounts remembered vaults and listens on
+   `http://127.0.0.1:4300`.
+4. Electron loads the active vault at `/app/w/<urlId>`, or `/app` when the user
+   still needs to choose a folder.
+5. A second launch focuses the existing window instead of starting another
+   runtime on the fixed port.
 
-The daemon serves the stock Kanwas web frontend; the desktop shell doesn't
-talk to it beyond that initial probe and navigation.
+In source development, resources are read from sibling `renderer/dist` and
+`local-runtime/templates` directories. A future packaging phase will place the
+same prebuilt resources under `process.resourcesPath`; the runtime does not
+build them on first launch.
 
-## Dev
+## Main/preload boundary
+
+The renderer remains sandboxed with context isolation and without Node
+integration. Preload exposes only typed desktop operations:
+
+- list remembered vaults,
+- open a folder through the native picker,
+- activate a vault,
+- change its display label,
+- forget it without deleting anything on disk,
+- participate in the bounded quit-flush handshake.
+
+Navigation is restricted to the embedded runtime's `/app` origin. HTTP, HTTPS,
+and mail links are handed to the operating system.
+
+## Development
+
+From the repository root:
 
 ```bash
-pnpm --filter desktop dev
+pnpm install
+pnpm --filter @kanwas/desktop dev
 ```
 
-## Build
+`dev` builds shared, Yjs core, local runtime, and renderer; rebuilds `node-pty`
+for Electron's ABI; bundles main/preload; then launches Electron.
+
+Useful source checks:
 
 ```bash
-pnpm --filter desktop build
+pnpm --filter @kanwas/desktop typecheck
+pnpm --filter @kanwas/desktop bundle
+pnpm --filter @kanwas/desktop check
 ```
 
-Output: `desktop/release/mac*/Kanwas.app` (exact path per electron-builder's
-target arch — unsigned, dev-tethered to this checkout).
+`build` currently produces source build outputs only. Installer generation,
+code signing, notarization, auto-update, and release artifact targets are
+intentionally deferred to a later electron-builder phase.
 
-## Env overrides
+## Native dependency
 
-- `KANWAS_PORT` — REST port the shell probes/spawns against (default `4300`)
-- `KANWAS_REPO` — repo root override (where `local-daemon/dist/cli.js` is
-  resolved from)
-- `KANWAS_NODE` — path to the `node` binary used to spawn the daemon
+The embedded terminal uses `node-pty`. Run this after changing Electron or
+`node-pty` versions if the normal development command has not already done so:
 
-## Prereqs
+```bash
+pnpm --filter @kanwas/desktop rebuild:native
+```
 
-- Node ≥ 20 on the machine
-- `pnpm --filter local-daemon build` has produced `local-daemon/dist`
+Rebuilds must run on the target operating system. The app supports the native
+macOS PTY and Windows ConPTY implementations.
+
+## State and logs
+
+The vault registry is stored below Electron's platform-specific `userData`
+directory. On first use, the runtime can import the old
+`~/.kanwas/vaults.json` registry if one exists; the legacy file is never
+modified.
+
+Runtime logs use Electron's platform-specific logs directory. User documents
+and `metadata.yaml` remain in the folders the user selected.
 
 ## Quit behavior
 
-Quitting the shell **leaves the daemon running** — it may still be serving
-browser tabs. Run `kanwas down` (from `local-daemon`) to stop it.
+Before quitting, main gives the renderer up to five seconds to flush queued
+note saves. It then flushes mounted workspaces and closes terminal sessions,
+watchers, Yjs rooms, and the loopback server. `close()` is idempotent, so normal
+quit and partial-startup failure use the same cleanup path and do not leave an
+orphan process.

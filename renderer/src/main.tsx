@@ -1,0 +1,20 @@
+import { createRoot } from 'react-dom/client'
+import '@xyflow/react/dist/style.css'
+import '@blocknote/core/fonts/inter.css'
+import '@blocknote/mantine/style.css'
+import '@fontsource/caveat/400.css'
+import '@fontsource/caveat/500.css'
+import '@fontsource/caveat/600.css'
+import '@fontsource/caveat/700.css'
+import '@fontsource/libre-baskerville/400.css'
+import '@fontsource/libre-baskerville/400-italic.css'
+import '@fontsource/libre-baskerville/700.css'
+import '@fortawesome/fontawesome-free/css/fontawesome.min.css'
+import '@fortawesome/fontawesome-free/css/solid.min.css'
+import '@fortawesome/fontawesome-free/css/regular.min.css'
+import 'streamdown/styles.css'
+
+import '@/index.css'
+import App from '@/App.tsx'
+
+createRoot(document.getElementById('root')!).render(<App />)

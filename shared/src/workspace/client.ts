@@ -9,7 +9,7 @@ import { WorkspaceSocketProvider, type WorkspaceSocketProviderInstance } from '.
 import { createWorkspaceContentStore, type WorkspaceContentStore } from './workspace-content-store.js'
 
 export interface ConnectOptions {
-  /** Yjs server host (e.g., "localhost:1999" or "yjs.kanwas.ai") */
+  /** Embedded Yjs host (for example, `127.0.0.1:4300`). */
   host: string
   /** Workspace ID - used as the room name */
   workspaceId: string
@@ -17,6 +17,8 @@ export interface ConnectOptions {
   WebSocket?: typeof globalThis.WebSocket
   /** Protocol to use - defaults to localhost/browser-aware auto detection */
   protocol?: 'ws' | 'wss'
+  /** Socket.IO endpoint path; desktop uses `/yjs/socket.io`. */
+  path?: string
   /** Sync timeout in milliseconds - defaults to 30000 (30 seconds) */
   timeout?: number
   /** Optional logger for connection lifecycle logging */
@@ -24,7 +26,7 @@ export interface ConnectOptions {
   /** Correlation ID for distributed tracing */
   correlationId?: string
   /** Identifies which client process is writing updates */
-  clientKind?: 'frontend' | 'execenv' | 'cli' | 'unknown'
+  clientKind?: 'renderer' | 'local-runtime' | 'unknown'
   /** Optional caller-owned Y.Doc to sync into */
   yDoc?: Y.Doc
   /**
@@ -53,7 +55,7 @@ export interface WorkspaceConnection {
 }
 
 export interface ConnectNoteOptions {
-  /** Yjs server host (e.g., "localhost:1999" or "yjs.kanwas.ai") */
+  /** Embedded Yjs host (for example, `127.0.0.1:4300`). */
   host: string
   /** Workspace ID that owns the note */
   workspaceId: string
@@ -63,6 +65,8 @@ export interface ConnectNoteOptions {
   WebSocket?: typeof globalThis.WebSocket
   /** Protocol to use - defaults to localhost/browser-aware auto detection */
   protocol?: 'ws' | 'wss'
+  /** Socket.IO endpoint path; desktop uses `/yjs/socket.io`. */
+  path?: string
   /** Sync timeout in milliseconds - defaults to 30000 (30 seconds) */
   timeout?: number
   /** Optional logger for connection lifecycle logging */
@@ -70,7 +74,7 @@ export interface ConnectNoteOptions {
   /** Correlation ID for distributed tracing */
   correlationId?: string
   /** Identifies which client process is writing updates */
-  clientKind?: 'frontend' | 'execenv' | 'cli' | 'unknown'
+  clientKind?: 'renderer' | 'local-runtime' | 'unknown'
   /** Optional caller-owned Y.Doc to sync into */
   yDoc?: Y.Doc
   /**
@@ -103,6 +107,7 @@ export async function connectToWorkspace(options: ConnectOptions): Promise<Works
     workspaceId,
     WebSocket,
     protocol,
+    path,
     timeout = 30000,
     logger,
     correlationId,
@@ -125,6 +130,7 @@ export async function connectToWorkspace(options: ConnectOptions): Promise<Works
   const provider = new WorkspaceSocketProvider(host, workspaceId, yDoc, {
     connect: false,
     protocol,
+    path,
     WebSocketPolyfill: WebSocketConstructor,
     params: () => ({
       ...(correlationId ? { correlationId } : {}),
@@ -179,6 +185,7 @@ export async function connectToNote(options: ConnectNoteOptions): Promise<NoteCo
     noteId,
     WebSocket,
     protocol,
+    path,
     timeout = 30000,
     logger,
     correlationId,
@@ -201,6 +208,7 @@ export async function connectToNote(options: ConnectNoteOptions): Promise<NoteCo
   const provider = new NoteSocketProvider(host, workspaceId, noteId, yDoc, {
     connect: false,
     protocol,
+    path,
     WebSocketPolyfill: WebSocketConstructor,
     params: () => ({
       ...(correlationId ? { correlationId } : {}),

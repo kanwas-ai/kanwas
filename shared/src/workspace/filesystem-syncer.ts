@@ -1580,11 +1580,11 @@ export class FilesystemSyncer {
     switch (change.type) {
       case 'create':
         // Idempotent create: a directory-create event for a path that already
-        // backs a live canvas must NOT mint a duplicate. The local daemon's
+        // backs a live canvas must NOT mint a duplicate. The local runtime's
         // flusher `mkdir`s a directory for every UI-created canvas (e.g. canvas
         // "New Canvas" → dir "new-canvas"); the watcher then reports that dir back
         // as an `addDir`. Without this guard `createCanvas` would mint a SECOND
-        // canvas from the daemon's own echo (the "New Canvas" + "new-canvas"
+        // canvas from the runtime's own echo (the "New Canvas" + "new-canvas"
         // duplicate) and overwrite the path→canvas mapping, orphaning the
         // original. Mirrors the `getMapping()` guard the file syncers and
         // `ensureParentCanvas()` already use.

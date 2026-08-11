@@ -1,14 +1,13 @@
-# Developer Tools
+# Developer tools
 
-This directory contains development scripts and examples.
+Kanwas runs as one Electron application, so the old multi-service development
+launchers are no longer needed. Start the app from the repository root with:
 
-## Scripts
+```bash
+pnpm --filter @kanwas/desktop dev
+```
 
-- `dev-iterm.sh` / `dev-iterm.scpt` - Start all development services in iTerm tabs
-- `dev-kill.sh` - Kill all development services
-- `DEV-SCRIPTS.md` - Documentation for the dev scripts
-
-## Claude Code Commands
+## Claude Code commands
 
 The `claude-commands/` directory contains example slash commands for Claude Code.
 
@@ -26,4 +25,4 @@ mkdir -p .claude/commands
 cp dev/claude-commands/*.md .claude/commands/
 ```
 
-Note: `.claude/` is gitignored, so local commands won't be committed.
+`.claude/` is gitignored, so local commands are not committed.

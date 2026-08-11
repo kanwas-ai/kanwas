@@ -42,6 +42,19 @@ describe('sanitizeFilename', () => {
     expect(sanitizeFilename('filename-')).toBe('filename')
     expect(sanitizeFilename('-filename-')).toBe('filename')
   })
+
+  it('should avoid Windows reserved device names', () => {
+    for (const reserved of ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'LPT1']) {
+      expect(sanitizeFilename(reserved)).toBe(`_${reserved.toLowerCase()}`)
+    }
+    expect(sanitizeFilename('CON.txt')).toBe('_con.txt')
+  })
+
+  it('should remove trailing dots and spaces for Windows-compatible paths', () => {
+    expect(sanitizeFilename('project...')).toBe('project')
+    expect(sanitizeFilename('project.   ')).toBe('project')
+    expect(sanitizeFilename('...')).toBe('untitled')
+  })
 })
 
 describe('makeUniqueName', () => {
