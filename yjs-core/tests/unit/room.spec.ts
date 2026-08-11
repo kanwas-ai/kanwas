@@ -1,9 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness.js'
 import * as Y from 'yjs'
 import { createWorkspaceContentStore, decodeBootstrapPayload, type WorkspaceBootstrapPayload } from 'shared'
 import { createNoteDoc, getNoteDocMeta } from 'shared/note-doc'
-import { SOCKET_EVENT_AWARENESS, SOCKET_EVENT_BOOTSTRAP } from '../../src/protocol.js'
+import { SOCKET_EVENT_BOOTSTRAP } from '../../src/protocol.js'
 import { RoomManager } from '../../src/room-manager.js'
 import { WorkspaceRoom, type WorkspaceSnapshotBundle } from '../../src/room.js'
 import type { CreateNoteBundlePayload } from '../../src/room-types.js'
@@ -197,39 +196,13 @@ function getBootstrapPayload(socket: ReturnType<typeof createSocket>): Workspace
   return decodeBootstrapPayload(bootstrapBytes)
 }
 
-function getEmittedPayloads<T>(socket: ReturnType<typeof createSocket>, event: string): T[] {
-  return socket.emit.mock.calls.filter(([emittedEvent]) => emittedEvent === event).map(([, payload]) => payload as T)
-}
-
-function createNoteAwarenessUpdate(noteId: string): { clientId: number; update: Uint8Array } {
-  const doc = new Y.Doc({ guid: `${noteId}-awareness` })
-  const awareness = new Awareness(doc)
-
-  awareness.setLocalState({ user: { id: `user-${noteId}` } })
-
-  return {
-    clientId: doc.clientID,
-    update: encodeAwarenessUpdate(awareness, [doc.clientID]),
-  }
-}
-
 function getRoomInternals(room: WorkspaceRoom): {
   noteStates: Map<string, unknown>
   rootState: { doc: Y.Doc }
-  socketClientIds: Map<string, Map<string, Set<number>>>
-  socketSubscriptions: Map<
-    string,
-    { awarenessDocIds: Set<string>; docIds: Set<string>; roomType: 'note' | 'workspace' }
-  >
 } {
   return room as unknown as {
     noteStates: Map<string, unknown>
     rootState: { doc: Y.Doc }
-    socketClientIds: Map<string, Map<string, Set<number>>>
-    socketSubscriptions: Map<
-      string,
-      { awarenessDocIds: Set<string>; docIds: Set<string>; roomType: 'note' | 'workspace' }
-    >
   }
 }
 
@@ -299,7 +272,7 @@ describe('WorkspaceRoom', () => {
     await room.initialize()
 
     const socket = createSocket('socket-invalid-live-root-update')
-    await room.attachSocket(socket as never, { roomType: 'workspace' })
+    await room.attachSocket(socket as never, {})
 
     room.handleUpdate(socket as never, {
       docId: 'root',
@@ -337,7 +310,7 @@ describe('WorkspaceRoom', () => {
     await room.initialize()
 
     const socket = createSocket('socket-reject-unknown-note')
-    await room.attachSocket(socket as never, { roomType: 'workspace' })
+    await room.attachSocket(socket as never, {})
 
     const unknownNoteId = 'note-unknown'
     room.handleUpdate(socket as never, {
@@ -375,7 +348,7 @@ describe('WorkspaceRoom', () => {
     await room.initialize()
 
     const socket = createSocket('socket-create-note-bundle')
-    await room.attachSocket(socket as never, { roomType: 'workspace' })
+    await room.attachSocket(socket as never, {})
 
     const noteId = 'note-created'
     const noteDoc = createBlockNoteDoc(noteId, 'hello bundled note')
@@ -422,7 +395,7 @@ describe('WorkspaceRoom', () => {
     await room.initialize()
 
     const socket = createSocket('socket-create-sticky-note-bundle')
-    await room.attachSocket(socket as never, { roomType: 'workspace' })
+    await room.attachSocket(socket as never, {})
 
     const noteId = 'sticky-created'
     const noteDoc = createNoteDoc(noteId, 'stickyNote')
@@ -469,7 +442,7 @@ describe('WorkspaceRoom', () => {
     await room.initialize()
 
     const socket = createSocket('socket-invalid-create-note-bundle')
-    await room.attachSocket(socket as never, { roomType: 'workspace' })
+    await room.attachSocket(socket as never, {})
 
     const noteId = 'note-missing-root-ref'
     room.handleCreateNoteBundle(socket as never, {
@@ -511,7 +484,7 @@ describe('WorkspaceRoom', () => {
     await room.initialize()
 
     const socket = createSocket('socket-invalid-create-note-snapshot')
-    await room.attachSocket(socket as never, { roomType: 'workspace' })
+    await room.attachSocket(socket as never, {})
 
     const noteId = 'note-invalid-snapshot'
     room.handleCreateNoteBundle(socket as never, {
@@ -587,7 +560,7 @@ describe('WorkspaceRoom', () => {
       await room.initialize()
 
       const socket = createSocket('socket-save-max-wait')
-      await room.attachSocket(socket as never, { roomType: 'workspace' })
+      await room.attachSocket(socket as never, {})
 
       const touch = (name: string) =>
         room.handleUpdate(socket as never, {
@@ -634,7 +607,7 @@ describe('WorkspaceRoom', () => {
     const socket = createSocket('socket-invalid-live-root-update-renderer')
     await room.attachSocket(
       socket as never,
-      { clientKind: 'renderer', roomType: 'workspace' },
+      { clientKind: 'renderer' },
       { correlationId: 'corr-invalid-live-root-update' }
     )
 
@@ -713,176 +686,13 @@ describe('WorkspaceRoom', () => {
     await room.initialize()
 
     const socket = createSocket('socket-1')
-    await room.attachSocket(socket as never, { roomType: 'workspace' })
+    await room.attachSocket(socket as never, {})
 
     const bootstrapPayload = getBootstrapPayload(socket)
 
     expect(bootstrapPayload.docs).toHaveLength(2)
     expect(bootstrapPayload.docs[0]).toMatchObject({ docId: 'root', kind: 'root' })
     expect(bootstrapPayload.docs[1]).toMatchObject({ docId: noteId, kind: 'note', noteKind: 'blockNote' })
-  })
-
-  it('bootstraps dedicated note rooms without sending the root doc', async () => {
-    const noteId = 'note-1'
-    const rootDoc = createRootDoc([noteId])
-    const noteDoc = createBlockNoteDoc(noteId, 'hello note')
-
-    const store: DocumentStore = {
-      deleteNote: vi.fn(async () => undefined),
-      loadNote: vi.fn(async () => Y.encodeStateAsUpdateV2(noteDoc)),
-      loadRoot: vi.fn(async () => Y.encodeStateAsUpdateV2(rootDoc)),
-      saveNote: vi.fn(async () => undefined),
-      saveRoot: vi.fn(async () => undefined),
-    }
-
-    const room = new WorkspaceRoom({
-      logger,
-      saveDebounceMs: 5,
-      saveMaxWaitMs: 100,
-      store,
-      workspaceId: 'workspace-subscribe',
-    })
-
-    await room.initialize()
-
-    const socket = createSocket('socket-1')
-    await room.attachSocket(socket as never, { roomType: 'note', noteId })
-
-    const bootstrapPayload = getBootstrapPayload(socket)
-
-    expect(bootstrapPayload.docs).toHaveLength(1)
-    expect(bootstrapPayload.docs[0]).toMatchObject({ docId: noteId, kind: 'note', noteKind: 'blockNote' })
-  })
-
-  it('keeps note awareness off for workspace sockets until they subscribe', async () => {
-    const noteId = 'note-1'
-    const rootDoc = createRootDoc([noteId])
-    const noteDoc = createBlockNoteDoc(noteId, 'hello note')
-
-    const store: DocumentStore = {
-      deleteNote: vi.fn(async () => undefined),
-      loadNote: vi.fn(async () => Y.encodeStateAsUpdateV2(noteDoc)),
-      loadRoot: vi.fn(async () => Y.encodeStateAsUpdateV2(rootDoc)),
-      saveNote: vi.fn(async () => undefined),
-      saveRoot: vi.fn(async () => undefined),
-    }
-
-    const room = new WorkspaceRoom({
-      logger,
-      saveDebounceMs: 5,
-      saveMaxWaitMs: 100,
-      store,
-      workspaceId: 'workspace-awareness-subscription',
-    })
-
-    await room.initialize()
-
-    const noteSocket = createSocket('socket-note')
-    await room.attachSocket(noteSocket as never, { roomType: 'note', noteId })
-
-    const workspaceSocket = createSocket('socket-workspace')
-    await room.attachSocket(workspaceSocket as never, { roomType: 'workspace' })
-
-    const awarenessPayload = createNoteAwarenessUpdate(noteId)
-    room.handleAwarenessUpdate(noteSocket as never, {
-      docId: noteId,
-      generation: 1,
-      kind: 'note',
-      update: awarenessPayload.update,
-    })
-
-    expect(
-      getEmittedPayloads<{ docId: string }>(workspaceSocket, SOCKET_EVENT_AWARENESS).filter(
-        (payload) => payload.docId === noteId
-      )
-    ).toEqual([])
-
-    room.handleAwarenessSubscription(workspaceSocket as never, {
-      action: 'subscribe',
-      docId: noteId,
-      kind: 'note',
-    })
-
-    expect(
-      getEmittedPayloads<{ docId: string; generation: number; kind: string; update: Uint8Array }>(
-        workspaceSocket,
-        SOCKET_EVENT_AWARENESS
-      ).filter((payload) => payload.docId === noteId)
-    ).toContainEqual(
-      expect.objectContaining({
-        docId: noteId,
-        generation: 1,
-        kind: 'note',
-        update: expect.any(Uint8Array),
-      })
-    )
-  })
-
-  it('removes tracked note awareness when a workspace socket unsubscribes', async () => {
-    const noteId = 'note-1'
-    const rootDoc = createRootDoc([noteId])
-    const noteDoc = createBlockNoteDoc(noteId, 'hello note')
-
-    const store: DocumentStore = {
-      deleteNote: vi.fn(async () => undefined),
-      loadNote: vi.fn(async () => Y.encodeStateAsUpdateV2(noteDoc)),
-      loadRoot: vi.fn(async () => Y.encodeStateAsUpdateV2(rootDoc)),
-      saveNote: vi.fn(async () => undefined),
-      saveRoot: vi.fn(async () => undefined),
-    }
-
-    const room = new WorkspaceRoom({
-      logger,
-      saveDebounceMs: 5,
-      saveMaxWaitMs: 100,
-      store,
-      workspaceId: 'workspace-awareness-unsubscribe',
-    })
-
-    await room.initialize()
-
-    const noteSocket = createSocket('socket-note')
-    await room.attachSocket(noteSocket as never, { roomType: 'note', noteId })
-    noteSocket.emit.mockClear()
-
-    const workspaceSocket = createSocket('socket-workspace')
-    await room.attachSocket(workspaceSocket as never, { roomType: 'workspace' })
-    room.handleAwarenessSubscription(workspaceSocket as never, {
-      action: 'subscribe',
-      docId: noteId,
-      kind: 'note',
-    })
-
-    const awarenessPayload = createNoteAwarenessUpdate(noteId)
-    room.handleAwarenessUpdate(workspaceSocket as never, {
-      docId: noteId,
-      generation: 1,
-      kind: 'note',
-      update: awarenessPayload.update,
-    })
-
-    const internals = getRoomInternals(room)
-    expect(internals.socketClientIds.get('socket-workspace')?.get(noteId)).toEqual(new Set([awarenessPayload.clientId]))
-
-    noteSocket.emit.mockClear()
-    room.handleAwarenessSubscription(workspaceSocket as never, {
-      action: 'unsubscribe',
-      docId: noteId,
-      kind: 'note',
-    })
-
-    expect(internals.socketClientIds.get('socket-workspace')?.has(noteId) ?? false).toBe(false)
-
-    const noteState = internals.noteStates.get(noteId) as { awareness: Awareness }
-    expect(noteState.awareness.getStates().has(awarenessPayload.clientId)).toBe(false)
-    expect(getEmittedPayloads(noteSocket, SOCKET_EVENT_AWARENESS)).toContainEqual(
-      expect.objectContaining({
-        docId: noteId,
-        generation: 1,
-        kind: 'note',
-        update: expect.any(Uint8Array),
-      })
-    )
   })
 
   it('loads all workspace notes in parallel during workspace bootstrap', async () => {
@@ -914,7 +724,7 @@ describe('WorkspaceRoom', () => {
     })
 
     await room.initialize()
-    await room.attachSocket(createSocket('socket-parallel') as never, { roomType: 'workspace' })
+    await room.attachSocket(createSocket('socket-parallel') as never, {})
 
     expect(store.loadNote).toHaveBeenCalledTimes(noteIds.length)
     expect(maxConcurrentLoads).toBeGreaterThan(1)
@@ -951,14 +761,14 @@ describe('WorkspaceRoom', () => {
 
     await room.initialize()
 
-    const workspaceAttach = room.attachSocket(createSocket('socket-workspace') as never, { roomType: 'workspace' })
-    const noteAttach = room.attachSocket(createSocket('socket-note') as never, { roomType: 'note', noteId })
+    const firstAttach = room.attachSocket(createSocket('socket-first') as never, {})
+    const secondAttach = room.attachSocket(createSocket('socket-second') as never, {})
 
     await Promise.resolve()
     expect(loadCount).toBe(1)
 
     resolveLoad?.()
-    await Promise.all([workspaceAttach, noteAttach])
+    await Promise.all([firstAttach, secondAttach])
 
     expect(store.loadNote).toHaveBeenCalledTimes(1)
   })
@@ -1179,102 +989,6 @@ describe('WorkspaceRoom', () => {
     expect(store.saveRoot).not.toHaveBeenCalled()
   })
 
-  it('cleans tracked note awareness when a note is removed from root', async () => {
-    const noteId = 'note-1'
-    const rootDoc = createRootDoc([noteId])
-    const noteDoc = createBlockNoteDoc(noteId, 'hello note')
-
-    const store: DocumentStore = {
-      deleteNote: vi.fn(async () => undefined),
-      loadNote: vi.fn(async () => Y.encodeStateAsUpdateV2(noteDoc)),
-      loadRoot: vi.fn(async () => Y.encodeStateAsUpdateV2(rootDoc)),
-      saveNote: vi.fn(async () => undefined),
-      saveRoot: vi.fn(async () => undefined),
-    }
-
-    const room = new WorkspaceRoom({
-      logger,
-      saveDebounceMs: 5,
-      saveMaxWaitMs: 100,
-      store,
-      workspaceId: 'workspace-note-removal',
-    })
-
-    await room.initialize()
-
-    const noteSocket = createSocket('socket-note')
-    await room.attachSocket(noteSocket as never, { roomType: 'note', noteId })
-
-    const workspaceSocket = createSocket('socket-workspace')
-    await room.attachSocket(workspaceSocket as never, { roomType: 'workspace' })
-    room.handleAwarenessSubscription(workspaceSocket as never, {
-      action: 'subscribe',
-      docId: noteId,
-      kind: 'note',
-    })
-
-    const awarenessPayload = createNoteAwarenessUpdate(noteId)
-    room.handleAwarenessUpdate(workspaceSocket as never, {
-      docId: noteId,
-      generation: 1,
-      kind: 'note',
-      update: awarenessPayload.update,
-    })
-
-    const internals = getRoomInternals(room)
-    expect(internals.socketClientIds.get('socket-workspace')?.get(noteId)).toEqual(new Set([awarenessPayload.clientId]))
-
-    internals.rootState.doc.getMap<Y.Doc>('notes').delete(noteId)
-    ;(room as unknown as { syncAttachedNotes: () => void }).syncAttachedNotes()
-
-    expect(internals.noteStates.has(noteId)).toBe(false)
-    expect(internals.socketClientIds.get('socket-workspace')?.has(noteId) ?? false).toBe(false)
-    expect(internals.socketSubscriptions.get('socket-workspace')?.awarenessDocIds.has(noteId) ?? false).toBe(false)
-    expect(noteSocket.emit).toHaveBeenCalledWith('yjs:reload', { reason: 'note_removed' })
-    expect(noteSocket.disconnect).toHaveBeenCalledWith(true)
-  })
-
-  it('ignores stale workspace note awareness subscriptions after note removal', async () => {
-    const noteId = 'note-1'
-    const rootDoc = createRootDoc([noteId])
-    const noteDoc = createBlockNoteDoc(noteId, 'hello note')
-
-    const store: DocumentStore = {
-      deleteNote: vi.fn(async () => undefined),
-      loadNote: vi.fn(async () => Y.encodeStateAsUpdateV2(noteDoc)),
-      loadRoot: vi.fn(async () => Y.encodeStateAsUpdateV2(rootDoc)),
-      saveNote: vi.fn(async () => undefined),
-      saveRoot: vi.fn(async () => undefined),
-    }
-
-    const room = new WorkspaceRoom({
-      logger,
-      saveDebounceMs: 5,
-      saveMaxWaitMs: 100,
-      store,
-      workspaceId: 'workspace-ignore-stale-subscribe',
-    })
-
-    await room.initialize()
-
-    const workspaceSocket = createSocket('socket-workspace')
-    await room.attachSocket(workspaceSocket as never, { roomType: 'workspace' })
-
-    const internals = getRoomInternals(room)
-    internals.rootState.doc.getMap<Y.Doc>('notes').delete(noteId)
-    ;(room as unknown as { syncAttachedNotes: () => void }).syncAttachedNotes()
-
-    workspaceSocket.disconnect.mockClear()
-    room.handleAwarenessSubscription(workspaceSocket as never, {
-      action: 'subscribe',
-      docId: noteId,
-      kind: 'note',
-    })
-
-    expect(workspaceSocket.disconnect).not.toHaveBeenCalled()
-    expect(internals.socketSubscriptions.get('socket-workspace')?.awarenessDocIds.has(noteId) ?? false).toBe(false)
-  })
-
   it('ignores stale note document updates without disconnecting the socket', async () => {
     const noteId = 'note-1'
     const rootDoc = createRootDoc([noteId])
@@ -1298,11 +1012,11 @@ describe('WorkspaceRoom', () => {
 
     await room.initialize()
 
-    const noteSocket = createSocket('socket-note')
-    await room.attachSocket(noteSocket as never, { roomType: 'note', noteId })
+    const workspaceSocket = createSocket('socket-workspace')
+    await room.attachSocket(workspaceSocket as never, {})
 
-    noteSocket.disconnect.mockClear()
-    room.handleUpdate(noteSocket as never, {
+    workspaceSocket.disconnect.mockClear()
+    room.handleUpdate(workspaceSocket as never, {
       docId: noteId,
       generation: 99,
       kind: 'note',
@@ -1312,106 +1026,7 @@ describe('WorkspaceRoom', () => {
     const noteState = getRoomInternals(room).noteStates.get(noteId) as { doc: Y.Doc } | undefined
     expect(noteState).toBeDefined()
     expect(readBlockNoteText(noteState!.doc)).toContain('hello note')
-    expect(noteSocket.disconnect).not.toHaveBeenCalled()
-  })
-
-  it('ignores stale note awareness updates without disconnecting the socket', async () => {
-    const noteId = 'note-1'
-    const rootDoc = createRootDoc([noteId])
-    const noteDoc = createBlockNoteDoc(noteId, 'hello note')
-
-    const store: DocumentStore = {
-      deleteNote: vi.fn(async () => undefined),
-      loadNote: vi.fn(async () => Y.encodeStateAsUpdateV2(noteDoc)),
-      loadRoot: vi.fn(async () => Y.encodeStateAsUpdateV2(rootDoc)),
-      saveNote: vi.fn(async () => undefined),
-      saveRoot: vi.fn(async () => undefined),
-    }
-
-    const room = new WorkspaceRoom({
-      logger,
-      saveDebounceMs: 5,
-      saveMaxWaitMs: 100,
-      store,
-      workspaceId: 'workspace-ignore-stale-awareness',
-    })
-
-    await room.initialize()
-
-    const noteSocket = createSocket('socket-note')
-    await room.attachSocket(noteSocket as never, { roomType: 'note', noteId })
-
-    const noteState = getRoomInternals(room).noteStates.get(noteId) as { awareness: Awareness } | undefined
-    expect(noteState).toBeDefined()
-    const initialAwarenessSize = noteState!.awareness.getStates().size
-    const awarenessPayload = createNoteAwarenessUpdate(noteId)
-
-    noteSocket.disconnect.mockClear()
-    room.handleAwarenessUpdate(noteSocket as never, {
-      docId: noteId,
-      generation: 99,
-      kind: 'note',
-      update: awarenessPayload.update,
-    })
-
-    expect(noteState!.awareness.getStates().size).toBe(initialAwarenessSize)
-    expect(noteState!.awareness.getStates().has(awarenessPayload.clientId)).toBe(false)
-    expect(noteSocket.disconnect).not.toHaveBeenCalled()
-  })
-
-  it('cleans tracked note awareness when a note subdoc is replaced', async () => {
-    const noteId = 'note-1'
-    const rootDoc = createRootDoc([noteId])
-    const noteDoc = createBlockNoteDoc(noteId, 'hello note')
-
-    const store: DocumentStore = {
-      deleteNote: vi.fn(async () => undefined),
-      loadNote: vi.fn(async () => Y.encodeStateAsUpdateV2(noteDoc)),
-      loadRoot: vi.fn(async () => Y.encodeStateAsUpdateV2(rootDoc)),
-      saveNote: vi.fn(async () => undefined),
-      saveRoot: vi.fn(async () => undefined),
-    }
-
-    const room = new WorkspaceRoom({
-      logger,
-      saveDebounceMs: 5,
-      saveMaxWaitMs: 100,
-      store,
-      workspaceId: 'workspace-note-replace',
-    })
-
-    await room.initialize()
-
-    const noteSocket = createSocket('socket-note')
-    await room.attachSocket(noteSocket as never, { roomType: 'note', noteId })
-
-    const workspaceSocket = createSocket('socket-workspace')
-    await room.attachSocket(workspaceSocket as never, { roomType: 'workspace' })
-    room.handleAwarenessSubscription(workspaceSocket as never, {
-      action: 'subscribe',
-      docId: noteId,
-      kind: 'note',
-    })
-
-    const awarenessPayload = createNoteAwarenessUpdate(noteId)
-    room.handleAwarenessUpdate(workspaceSocket as never, {
-      docId: noteId,
-      generation: 1,
-      kind: 'note',
-      update: awarenessPayload.update,
-    })
-
-    const internals = getRoomInternals(room)
-    expect(internals.socketClientIds.get('socket-workspace')?.get(noteId)).toEqual(new Set([awarenessPayload.clientId]))
-
-    internals.rootState.doc.getMap<Y.Doc>('notes').set(noteId, new Y.Doc({ guid: noteId }))
-    ;(room as unknown as { syncAttachedNotes: () => void }).syncAttachedNotes()
-
-    expect(internals.noteStates.has(noteId)).toBe(true)
-    expect(internals.socketClientIds.get('socket-workspace')?.has(noteId) ?? false).toBe(false)
-    expect(internals.socketSubscriptions.get('socket-workspace')?.awarenessDocIds.has(noteId) ?? false).toBe(false)
-    expect(noteSocket.emit).toHaveBeenCalledWith('yjs:reload', { reason: 'note_replaced' })
-    expect(noteSocket.disconnect).toHaveBeenCalledWith(true)
+    expect(workspaceSocket.disconnect).not.toHaveBeenCalled()
   })
 
   it('persists root changes before deleting removed note blobs', async () => {
@@ -1478,7 +1093,7 @@ describe('WorkspaceRoom', () => {
     await room.initialize()
 
     const socket = createSocket('socket-inline-loaded-note')
-    await room.attachSocket(socket as never, { roomType: 'workspace' })
+    await room.attachSocket(socket as never, {})
 
     const clientRootDoc = createRootDoc()
     const contentStore = createWorkspaceContentStore(clientRootDoc)
@@ -1550,7 +1165,7 @@ describe('WorkspaceRoom', () => {
     await room.initialize()
 
     const socket = createSocket('socket-create-multi-note-bundle')
-    await room.attachSocket(socket as never, { roomType: 'workspace' })
+    await room.attachSocket(socket as never, {})
 
     const firstNoteId = 'note-created-1'
     const secondNoteId = 'note-created-2'
@@ -1605,7 +1220,7 @@ describe('WorkspaceRoom', () => {
 
     await room.initialize()
 
-    await expect(room.attachSocket(createSocket('socket-invalid') as never, { roomType: 'workspace' })).rejects.toThrow(
+    await expect(room.attachSocket(createSocket('socket-invalid') as never, {})).rejects.toThrow(
       'missing valid metadata'
     )
   })

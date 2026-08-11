@@ -18,10 +18,6 @@
       "types": "./dist/workspace/socketio-provider.d.ts",
       "default": "./dist/workspace/socketio-provider.js"
     },
-    "./note-provider": {
-      "types": "./dist/workspace/note-socketio-provider.d.ts",
-      "default": "./dist/workspace/note-socketio-provider.js"
-    },
     "./workspace-content-store": {
       "types": "./dist/workspace/workspace-content-store.d.ts",
       "default": "./dist/workspace/workspace-content-store.js"
@@ -83,7 +79,6 @@
     "unified": "^11.0.5",
     "valtio": "2.2.0",
     "valtio-y": "https://github.com/Ryner01/valtio-y/releases/download/v1.1.4/valtio-y-1.1.4.tgz",
-    "y-protocols": "^1.0.6",
     "yaml": "^2.8.1",
     "yjs": "^13.6.27"
   },

@@ -18,8 +18,6 @@ import { DocumentName } from './DocumentName'
 import { BlockNoteFormattingToolbar } from '@/components/note-editors/BlockNoteFormattingToolbar'
 import { BlockNoteEditorErrorBoundary } from '@/components/note-editors/BlockNoteEditorErrorBoundary'
 import { useBlockNoteAuditEffects } from '@/hooks/useBlockNoteAuditEffects'
-import { useBlockNoteCollaborationUserInfo } from '@/hooks/useBlockNoteCollaborationUserInfo'
-import { useCanvasCursorSuppressionWhileEditorFocused } from '@/hooks/useCanvasCursorSuppression'
 import { useBlockNoteTextSelectionSync } from '@/hooks/useBlockNoteTextSelectionSync'
 import { useNoteBlockNoteBinding } from '@/hooks/useNoteBlockNoteBinding'
 import { useNoteFileAutosave } from '@/hooks/useNoteFileAutosave'
@@ -28,7 +26,6 @@ import { type BlockNoteCollaborationProvider } from '@/lib/blocknote-collaborati
 import * as Y from 'yjs'
 import { createPasteHandler, handlePasteWithHardBreakDedupe } from '@/lib/paste-utils'
 import { PersistSelectionExtension } from '@/lib/persist-selection-extension'
-import { useIsFocusModeActive } from '@/store/useUIStore'
 import {
   WORKSPACE_INTERLINK_TYPE,
   WORKSPACE_INTERLINK_VERSION,
@@ -164,9 +161,7 @@ function BlockNoteEditor({
     },
   })
 
-  useBlockNoteCollaborationUserInfo(editor, localUser)
   useBlockNoteAuditEffects({ editor, nodeId: id, isKanwasProtected })
-  useCanvasCursorSuppressionWhileEditorFocused(editor)
   useBlockNoteTextSelectionSync({ editor, nodeId: id, documentName })
   useNoteFileAutosave({ editor, nodeId: id, fragment })
 
@@ -658,10 +653,7 @@ function BlockNoteNodeComponent({ selected, id, data }: BlockNoteNodeProps) {
   const { onCollapseNode, onFocusNode, onWorkspaceLinkNavigate } = data
   const isKanwasProtected = data.isKanwasProtected === true
   const { theme } = useTheme()
-  const focusMode = useIsFocusModeActive()
-  const { fragment, editorKey, collaborationProvider, undoManager } = useNoteBlockNoteBinding(id, {
-    awarenessEnabled: !focusMode,
-  })
+  const { fragment, editorKey, collaborationProvider, undoManager } = useNoteBlockNoteBinding(id)
   const rootRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
 

@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useRef, type RefObject } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { ReactFlowInstance } from '@xyflow/react'
-import type { WorkspaceSocketProviderInstance } from 'shared'
-import CursorManager from '@/lib/CursorManager'
 import { getCanvasViewport, setCanvasViewport } from '@/hooks/workspaceStorage'
 import { defaultCanvasViewport } from './CanvasFlow.config'
 import { startExitFocusMode, exitFocusMode } from '@/store/useUIStore'
@@ -14,14 +12,7 @@ interface UseCanvasViewportStateOptions {
   deferDefaultViewportRestore?: boolean
   focusMode: boolean
   savedViewport: { x: number; y: number; zoom: number } | null
-  provider: WorkspaceSocketProviderInstance
-  localUserId: string
-  isCursorPresenceSuppressed: () => boolean
-  acquireCursorPresenceSuppression: () => () => void
-  screenToFlowPosition: ReactFlowInstance['screenToFlowPosition']
-  getViewport: ReactFlowInstance['getViewport']
   setViewport: ReactFlowInstance['setViewport']
-  canvasSurfaceRef: RefObject<HTMLDivElement | null>
 }
 
 export function useCanvasViewportState({
@@ -32,16 +23,8 @@ export function useCanvasViewportState({
   deferDefaultViewportRestore = false,
   focusMode,
   savedViewport,
-  provider,
-  localUserId,
-  isCursorPresenceSuppressed,
-  acquireCursorPresenceSuppression,
-  screenToFlowPosition,
-  getViewport,
   setViewport,
-  canvasSurfaceRef,
 }: UseCanvasViewportStateOptions) {
-  const cursorManagerRef = useRef<CursorManager | null>(null)
   const saveViewportTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleViewportChange = useCallback(
@@ -73,37 +56,6 @@ export function useCanvasViewportState({
       }
     }
   }, [])
-
-  useEffect(() => {
-    const surface = canvasSurfaceRef.current
-    if (!surface) {
-      return
-    }
-
-    const cursorManager = new CursorManager(provider, {
-      userId: localUserId,
-      isPublishingSuppressed: isCursorPresenceSuppressed,
-    })
-    cursorManager.setReactFlowInstance({ screenToFlowPosition, getViewport } as ReactFlowInstance)
-    cursorManager.attach(surface, canvasId)
-    cursorManagerRef.current = cursorManager
-
-    return () => {
-      if (cursorManagerRef.current === cursorManager) {
-        cursorManagerRef.current = null
-      }
-
-      cursorManager.destroy()
-    }
-  }, [canvasId, canvasSurfaceRef, getViewport, isCursorPresenceSuppressed, localUserId, provider, screenToFlowPosition])
-
-  useEffect(() => {
-    if (!focusMode) {
-      return
-    }
-
-    return acquireCursorPresenceSuppression()
-  }, [acquireCursorPresenceSuppression, focusMode])
 
   const handleFocusModeExit = useCallback(() => {
     startExitFocusMode()

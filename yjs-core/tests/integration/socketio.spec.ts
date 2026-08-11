@@ -71,9 +71,14 @@ async function listen(server: HttpServer): Promise<string> {
   return `http://127.0.0.1:${address.port}`
 }
 
-function connect(origin: string, workspaceId: string, socketToken?: string): ClientSocket {
+function connect(
+  origin: string,
+  workspaceId: string,
+  socketToken?: string,
+  auth: Record<string, unknown> = {}
+): ClientSocket {
   return createSocketClient(origin, {
-    auth: { clientKind: 'renderer', socketToken, workspaceId },
+    auth: { clientKind: 'renderer', socketToken, workspaceId, ...auth },
     forceNew: true,
     path: SOCKET_PATH,
     reconnection: false,
@@ -155,6 +160,30 @@ describe('attachYjsCore', () => {
     })
     const origin = await listen(httpServer)
     const client = connect(origin, 'workspace-1')
+    clients.push(client)
+
+    await new Promise<void>((resolve, reject) => {
+      client.once('disconnect', () => resolve())
+      client.once('connect_error', reject)
+    })
+
+    expect(core.roomManager.activeRoomCount).toBe(0)
+  })
+
+  it('rejects legacy dedicated note-room handshakes', async () => {
+    httpServer = createServer()
+    core = attachYjsCore({
+      httpServer,
+      logger: createNoopLogger(),
+      socketPath: SOCKET_PATH,
+      store: createStore(),
+      tokenSecret: TOKEN_SECRET,
+    })
+    const origin = await listen(httpServer)
+    const client = connect(origin, 'workspace-1', mintToken('workspace-1'), {
+      noteId: 'note-1',
+      roomType: 'note',
+    })
     clients.push(client)
 
     await new Promise<void>((resolve, reject) => {

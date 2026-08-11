@@ -201,7 +201,7 @@ export function useNoteFileAutosave({ editor, nodeId, fragment }: UseNoteFileAut
     }
   }, [editor])
 
-  // Local edits (while armed) schedule a save; the provider's remote-apply echoes
+  // Local edits (while armed) schedule a save; incoming transport updates
   // (bootstrap/sync) and edits before arming never do.
   useEffect(() => {
     const doc = fragment.doc
@@ -213,7 +213,7 @@ export function useNoteFileAutosave({ editor, nodeId, fragment }: UseNoteFileAut
       if (!armedRef.current) {
         return
       }
-      if (provider.isRemoteNoteOrigin(nodeId, origin)) {
+      if (provider.isIncomingNoteOrigin(nodeId, origin)) {
         return
       }
       scheduleSave()

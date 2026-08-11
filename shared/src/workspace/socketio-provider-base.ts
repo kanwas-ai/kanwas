@@ -82,7 +82,6 @@ export abstract class SocketSyncProviderBase extends TypedEmitter {
 
   private readonly syncWaiters = new Set<ReadyWaiter>()
   private readonly options: SyncProviderOptions
-  private disconnectReason: string | null = null
   private hasSyncedAtLeastOnce = false
   private manualDisconnectRequested = false
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
@@ -110,17 +109,8 @@ export abstract class SocketSyncProviderBase extends TypedEmitter {
     })
   }
 
-  get isReconnecting(): boolean {
-    return this.reconnecting
-  }
-
-  get lastDisconnectReason(): string | null {
-    return this.disconnectReason
-  }
-
   connect(): void {
     this.shouldConnect = true
-    this.disconnectReason = null
     this.manualDisconnectRequested = false
     this.reloadRequested = false
     this.reconnecting = false
@@ -238,7 +228,6 @@ export abstract class SocketSyncProviderBase extends TypedEmitter {
 
   private readonly handleSocketConnect = (): void => {
     this.connected = true
-    this.disconnectReason = null
     this.reconnecting = false
     this.clearReconnectTimer()
     this.setSynced(false)
@@ -250,7 +239,6 @@ export abstract class SocketSyncProviderBase extends TypedEmitter {
     const shouldRefreshStatus = this.status === 'disconnected'
     const shouldReconnectAfterServerDisconnect = this.shouldReconnectAfterServerDisconnect(reason)
 
-    this.disconnectReason = reason
     this.reconnecting = shouldReconnectAfterServerDisconnect || (this.shouldConnect && this.socket?.active === true)
     this.applyDisconnectedState(this.createDisconnectBeforeSyncError())
 
@@ -281,7 +269,6 @@ export abstract class SocketSyncProviderBase extends TypedEmitter {
 
   private applyDisconnectedState(syncError: Error): void {
     this.connected = false
-    this.clearRemoteAwareness()
     this.onDisconnected()
 
     if (!this.synced) {
@@ -367,7 +354,6 @@ export abstract class SocketSyncProviderBase extends TypedEmitter {
   }
 
   protected abstract buildSocketAuth(): Record<string, unknown>
-  protected abstract clearRemoteAwareness(): void
   protected abstract createDestroyBeforeSyncError(): Error
   protected abstract createDisconnectBeforeSyncError(): Error
   protected abstract onConnected(): void

@@ -1,9 +1,11 @@
 # @kanwas/yjs-core
 
 Embedded Yjs synchronization for the Kanwas desktop app. This package owns
-workspace/note rooms, the Socket.IO protocol, workspace-scoped token
-verification, awareness, and debounced persistence. It does not listen on a
-port or choose a persistence implementation.
+one workspace room per mounted vault, the private Socket.IO document protocol,
+workspace-scoped token verification, and debounced persistence. Each workspace
+connection bootstraps the root plus every attached note document. There are no
+presence events or dedicated note rooms. The package does not listen on a port
+or choose a persistence implementation.
 
 ```ts
 import { attachYjsCore } from '@kanwas/yjs-core'

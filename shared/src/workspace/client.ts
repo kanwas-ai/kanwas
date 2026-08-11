@@ -4,7 +4,6 @@ import type { Logger } from '../logging/types.js'
 import { noopLogger } from '../logging/types.js'
 import type { WorkspaceDocument } from '../types.js'
 import { once } from '../utils/once.js'
-import { NoteSocketProvider, type NoteSocketProviderInstance } from './note-socketio-provider.js'
 import { WorkspaceSocketProvider, type WorkspaceSocketProviderInstance } from './socketio-provider.js'
 import { createWorkspaceContentStore, type WorkspaceContentStore } from './workspace-content-store.js'
 
@@ -46,52 +45,10 @@ export interface WorkspaceConnection {
   yDoc: Y.Doc
   /** Alias for yDoc; retained for the root-doc terminology in the new transport */
   rootDoc: Y.Doc
-  /** The underlying socket provider for monitoring/awareness */
+  /** The underlying local document transport */
   provider: WorkspaceSocketProviderInstance
   /** Note-content accessor layer for attached note subdocs */
   contentStore: WorkspaceContentStore
-  /** Disconnect and cleanup resources */
-  disconnect: () => void
-}
-
-export interface ConnectNoteOptions {
-  /** Embedded Yjs host (for example, `127.0.0.1:4300`). */
-  host: string
-  /** Workspace ID that owns the note */
-  workspaceId: string
-  /** Note ID to connect in a dedicated room */
-  noteId: string
-  /** WebSocket constructor - required in Node.js, optional in browsers */
-  WebSocket?: typeof globalThis.WebSocket
-  /** Protocol to use - defaults to localhost/browser-aware auto detection */
-  protocol?: 'ws' | 'wss'
-  /** Socket.IO endpoint path; desktop uses `/yjs/socket.io`. */
-  path?: string
-  /** Sync timeout in milliseconds - defaults to 30000 (30 seconds) */
-  timeout?: number
-  /** Optional logger for connection lifecycle logging */
-  logger?: Logger
-  /** Correlation ID for distributed tracing */
-  correlationId?: string
-  /** Identifies which client process is writing updates */
-  clientKind?: 'renderer' | 'local-runtime' | 'unknown'
-  /** Optional caller-owned Y.Doc to sync into */
-  yDoc?: Y.Doc
-  /**
-   * Signed workspace-scoped socket token. Either a string (one-shot) or a
-   * callback invoked on each (re)connect so the token can be refreshed before
-   * expiry.
-   */
-  socketToken?: string | (() => string | null | undefined)
-}
-
-export interface NoteConnection {
-  /** Raw Y.Doc instance for the dedicated note room */
-  doc: Y.Doc
-  /** Alias for doc for API symmetry */
-  yDoc: Y.Doc
-  /** The underlying socket provider for monitoring/awareness */
-  provider: NoteSocketProviderInstance
   /** Disconnect and cleanup resources */
   disconnect: () => void
 }
@@ -172,74 +129,6 @@ export async function connectToWorkspace(options: ConnectOptions): Promise<Works
     proxy,
     rootDoc: yDoc,
     rootProxy: proxy,
-    yDoc,
-    provider,
-    disconnect: cleanup,
-  }
-}
-
-export async function connectToNote(options: ConnectNoteOptions): Promise<NoteConnection> {
-  const {
-    host,
-    workspaceId,
-    noteId,
-    WebSocket,
-    protocol,
-    path,
-    timeout = 30000,
-    logger,
-    correlationId,
-    clientKind,
-    socketToken,
-  } = options
-  const log = logger?.child({ component: 'NoteClient', workspaceId, noteId, correlationId, clientKind }) ?? noopLogger
-
-  log.info({ host, protocol }, 'Connecting to note room')
-  const startTime = Date.now()
-
-  const yDoc = options.yDoc ?? new Y.Doc({ guid: noteId })
-  const ownsDoc = !options.yDoc
-
-  const WebSocketConstructor = WebSocket ?? globalThis.WebSocket
-  if (!WebSocketConstructor) {
-    throw new Error('connectToNote requires a WebSocket implementation in this environment')
-  }
-
-  const provider = new NoteSocketProvider(host, workspaceId, noteId, yDoc, {
-    connect: false,
-    protocol,
-    path,
-    WebSocketPolyfill: WebSocketConstructor,
-    params: () => ({
-      ...(correlationId ? { correlationId } : {}),
-      ...(clientKind ? { clientKind } : {}),
-      ...resolveSocketTokenEntry(socketToken),
-    }),
-  })
-
-  const cleanup = once(() => {
-    log.debug('Disconnecting from note room')
-    provider.destroy()
-    if (ownsDoc) {
-      yDoc.destroy()
-    }
-  })
-
-  log.debug({ timeout }, 'Waiting for note sync')
-  try {
-    const syncPromise = provider.whenSynced()
-    provider.connect()
-    await waitForSync(provider, syncPromise, timeout, log, `Note sync timeout for ${noteId}`)
-  } catch (error) {
-    cleanup()
-    throw error
-  }
-
-  const durationMs = Date.now() - startTime
-  log.info({ durationMs }, 'Note room connected and synced')
-
-  return {
-    doc: yDoc,
     yDoc,
     provider,
     disconnect: cleanup,

@@ -65,15 +65,7 @@ export function CanvasFlow({
   const canvas = useSnapshot(mutableCanvas) as CanvasItem
   const { themeMode } = useTheme()
   const workspaceUndoController = useWorkspaceUndoController()
-  const {
-    workspaceId,
-    store,
-    yDoc,
-    provider,
-    localUser,
-    isCursorPresenceSuppressed,
-    acquireCursorPresenceSuppression,
-  } = useWorkspace()
+  const { workspaceId, store, yDoc } = useWorkspace()
   const fitNodeInView = useFitNodeInView()
   const focusNodeAt100 = useFocusNodeAt100()
   const setSelectedNodeIds = useCallback(
@@ -196,14 +188,7 @@ export function CanvasFlow({
     deferDefaultViewportRestore: Boolean(fitCanvasRequestKey),
     focusMode,
     savedViewport,
-    provider,
-    localUserId: localUser.id,
-    isCursorPresenceSuppressed,
-    acquireCursorPresenceSuppression,
-    screenToFlowPosition,
-    getViewport,
     setViewport,
-    canvasSurfaceRef,
   })
 
   const { pendingDeleteChanges, queueDeleteConfirmation, confirmDelete, cancelDelete } = useCanvasDeletion({

@@ -1,5 +1,4 @@
 import * as Y from 'yjs'
-import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwarenessStates } from 'y-protocols/awareness.js'
 import type { Socket } from 'socket.io'
 import { encodeBootstrapPayload } from 'shared'
 import { CanvasTreeValidationError, assertValidWorkspaceRoot } from 'shared/canvas-tree'
@@ -8,7 +7,7 @@ import type { DocumentStore } from './document-store.js'
 import { appendError, getErrorLogContext, throwAggregateErrors } from './error-utils.js'
 import { bindLoggerContext, type Logger } from './logger.js'
 import { getContextLogger, type OperationContext } from './operation-context.js'
-import { SOCKET_EVENT_AWARENESS, SOCKET_EVENT_BOOTSTRAP, SOCKET_EVENT_RELOAD, SOCKET_EVENT_UPDATE } from './protocol.js'
+import { SOCKET_EVENT_BOOTSTRAP, SOCKET_EVENT_RELOAD, SOCKET_EVENT_UPDATE } from './protocol.js'
 import { createDocState } from './room-doc-state.js'
 import { hydrateSnapshotBundle, type HydratedSnapshotBundle } from './room-snapshot.js'
 import {
@@ -23,14 +22,13 @@ import {
   isSocketDocOrigin,
   normalizeBinary,
   validateLoadedNoteDoc,
-  type AttachSocketOptions,
+  type AttachWorkspaceSocketOptions,
   type DocState,
   type InitializeRoomOptions,
   type ReplaceDocumentOptions,
   type SocketSubscriptionState,
   type WorkspaceBootstrapDoc,
   type WorkspaceBootstrapPayload,
-  type WorkspaceAwarenessSubscriptionPayload,
   type WorkspaceDocEnvelope,
   type WorkspaceDocKind,
   type WorkspaceDocRef,
@@ -38,11 +36,10 @@ import {
   type WorkspaceSnapshotBundle,
 } from './room-types.js'
 
-export type { AttachSocketOptions, ReplaceDocumentOptions, WorkspaceRoomOptions, WorkspaceSnapshotBundle }
+export type { AttachWorkspaceSocketOptions, ReplaceDocumentOptions, WorkspaceRoomOptions, WorkspaceSnapshotBundle }
 
 export class WorkspaceRoom {
   private readonly sockets = new Map<string, Socket>()
-  private readonly socketClientIds = new Map<string, Map<string, Set<number>>>()
   private readonly socketContexts = new Map<string, OperationContext>()
   private readonly socketClientKinds = new Map<string, ClientKind>()
   private readonly socketSubscriptions = new Map<string, SocketSubscriptionState>()
@@ -132,7 +129,7 @@ export class WorkspaceRoom {
     return this.initializeTask
   }
 
-  async attachSocket(socket: Socket, options: AttachSocketOptions, context?: OperationContext): Promise<void> {
+  async attachSocket(socket: Socket, options: AttachWorkspaceSocketOptions, context?: OperationContext): Promise<void> {
     this.sockets.set(socket.id, socket)
     const capabilities = options.capabilities ?? DEFAULT_SOCKET_CAPABILITIES
     const clientKind = options.clientKind ?? 'unknown'
@@ -147,68 +144,35 @@ export class WorkspaceRoom {
       assertValidWorkspaceRoot(this.rootState.doc.getMap('state').get('root'))
     }
 
-    if (options.roomType === 'workspace') {
-      const noteIds = await this.loadAllNoteIds(context)
-      const subscriptionState: SocketSubscriptionState = {
-        awarenessDocIds: new Set(['root']),
-        capabilities,
-        roomType: 'workspace',
-        docIds: new Set(['root', ...noteIds]),
-      }
-      this.socketSubscriptions.set(socket.id, subscriptionState)
-
-      const docs: WorkspaceBootstrapDoc[] = [encodeBootstrapDoc(this.rootState)]
-      for (const noteId of noteIds) {
-        const noteState = this.noteStates.get(noteId)
-        if (!noteState) {
-          throw new Error(`Workspace ${this.workspaceId} is missing loaded note state ${noteId}`)
-        }
-
-        docs.push(encodeBootstrapDoc(noteState))
-      }
-
-      socket.emit(SOCKET_EVENT_BOOTSTRAP, encodeBootstrapPayload({ docs } satisfies WorkspaceBootstrapPayload))
-      this.sendFullAwareness(socket, this.rootState)
-      return
-    }
-
-    const noteState = await this.ensureNoteLoaded(options.noteId, context)
+    const noteIds = await this.loadAllNoteIds(context)
     const subscriptionState: SocketSubscriptionState = {
-      awarenessDocIds: new Set([options.noteId]),
       capabilities,
-      roomType: 'note',
-      noteId: options.noteId,
-      docIds: new Set([options.noteId]),
+      docIds: new Set(['root', ...noteIds]),
     }
     this.socketSubscriptions.set(socket.id, subscriptionState)
 
-    socket.emit(
-      SOCKET_EVENT_BOOTSTRAP,
-      encodeBootstrapPayload({ docs: [encodeBootstrapDoc(noteState)] } satisfies WorkspaceBootstrapPayload)
-    )
-    this.sendFullAwareness(socket, noteState)
+    const docs: WorkspaceBootstrapDoc[] = [encodeBootstrapDoc(this.rootState)]
+    for (const noteId of noteIds) {
+      const noteState = this.noteStates.get(noteId)
+      if (!noteState) {
+        throw new Error(`Workspace ${this.workspaceId} is missing loaded note state ${noteId}`)
+      }
+
+      docs.push(encodeBootstrapDoc(noteState))
+    }
+
+    socket.emit(SOCKET_EVENT_BOOTSTRAP, encodeBootstrapPayload({ docs } satisfies WorkspaceBootstrapPayload))
   }
 
   detachSocket(socketId: string): void {
     this.sockets.delete(socketId)
-    const clientsByDoc = this.socketClientIds.get(socketId)
-    if (clientsByDoc) {
-      for (const [docId, clientIds] of clientsByDoc.entries()) {
-        const docState = this.getDocState({ docId, kind: docId === 'root' ? 'root' : 'note' })
-        if (docState && clientIds.size > 0) {
-          removeAwarenessStates(docState.awareness, Array.from(clientIds), { docId, socketId })
-        }
-      }
-    }
-
-    this.socketClientIds.delete(socketId)
     this.socketContexts.delete(socketId)
     this.socketClientKinds.delete(socketId)
     this.socketSubscriptions.delete(socketId)
   }
 
   handleUpdate(socket: Socket, payload: WorkspaceDocEnvelope): void {
-    this.handleSocketDocEnvelope(socket, payload, 'update', (docState, update) => {
+    this.handleSocketDocEnvelope(socket, payload, (docState, update) => {
       if (payload.kind === 'root') {
         this.applyValidatedRootUpdate(docState.doc, update, { docId: payload.docId, socketId: socket.id })
       } else {
@@ -261,75 +225,6 @@ export class WorkspaceRoom {
         },
         'Ignored invalid create-note bundle'
       )
-    }
-  }
-
-  handleAwarenessUpdate(socket: Socket, payload: WorkspaceDocEnvelope): void {
-    this.handleSocketDocEnvelope(socket, payload, 'awareness', (docState, update) => {
-      applyAwarenessUpdate(docState.awareness, update, {
-        docId: payload.docId,
-        socketId: socket.id,
-      })
-    })
-  }
-
-  handleAwarenessSubscription(socket: Socket, payload: WorkspaceAwarenessSubscriptionPayload): void {
-    if (this.blockedForReplacement || this.destroyed) {
-      return
-    }
-
-    const log = this.getSocketLogger(socket.id)
-
-    try {
-      const subscriptionState = this.socketSubscriptions.get(socket.id)
-      if (!subscriptionState) {
-        throw new Error(`Socket ${socket.id} is not attached to workspace room ${this.workspaceId}`)
-      }
-
-      if (subscriptionState.roomType !== 'workspace') {
-        throw new Error(
-          `Socket ${socket.id} cannot change awareness subscriptions for room type ${subscriptionState.roomType}`
-        )
-      }
-
-      if (payload.kind !== 'note') {
-        throw new Error(`Workspace awareness subscriptions only support note docs, received ${payload.kind}`)
-      }
-
-      if (!subscriptionState.docIds.has(payload.docId)) {
-        throw new Error(`Socket ${socket.id} is not subscribed to doc ${payload.docId}`)
-      }
-
-      const docState = this.getDocState(payload)
-      if (!docState) {
-        throw new Error(`Unknown doc ${payload.docId}`)
-      }
-
-      if (payload.action === 'subscribe') {
-        if (subscriptionState.awarenessDocIds.has(payload.docId)) {
-          return
-        }
-
-        subscriptionState.awarenessDocIds.add(payload.docId)
-        this.sendFullAwareness(socket, docState)
-        return
-      }
-
-      subscriptionState.awarenessDocIds.delete(payload.docId)
-      this.clearTrackedSocketDocAwareness(socket.id, payload.docId, docState.awareness)
-    } catch (error) {
-      log.warn(
-        {
-          ...getErrorLogContext(error),
-          action: payload.action,
-          docId: payload.docId,
-          socketId: socket.id,
-        },
-        'Ignored invalid awareness subscription change'
-      )
-
-      // Reconnect races can deliver stale note subscription changes after room state moved on.
-      // Ignore the bad request so the rest of the session stays usable.
     }
   }
 
@@ -446,7 +341,6 @@ export class WorkspaceRoom {
       appendError(errors, error)
     } finally {
       this.sockets.clear()
-      this.socketClientIds.clear()
       this.socketClientKinds.clear()
       this.socketContexts.clear()
       this.socketSubscriptions.clear()
@@ -478,9 +372,6 @@ export class WorkspaceRoom {
       generation,
       kind: 'root',
       loaded: true,
-      onAwarenessUpdate: (changes, origin, rootState) => {
-        this.handleAwarenessBroadcast(rootState, changes, origin)
-      },
       onDocumentUpdate: (update, origin, rootState) => {
         if (origin === rootState.docOrigin || this.isSuppressedDocOrigin(origin)) {
           return
@@ -501,9 +392,6 @@ export class WorkspaceRoom {
       loaded,
       noteId,
       noteKind,
-      onAwarenessUpdate: (changes, origin, state) => {
-        this.handleAwarenessBroadcast(state, changes, origin)
-      },
       onDocumentUpdate: (update, origin, state) => {
         if (origin === state.docOrigin || this.isSuppressedDocOrigin(origin)) {
           return
@@ -547,7 +435,6 @@ export class WorkspaceRoom {
     this.pendingPersistenceSocketId = null
     this.pendingPersistenceUpdateSizeBytes = undefined
     this.socketClientKinds.clear()
-    this.socketClientIds.clear()
   }
 
   private teardownWorkspaceState(): void {
@@ -806,14 +693,7 @@ export class WorkspaceRoom {
         }
 
         if (existing) {
-          this.clearTrackedDocAwareness(noteId, existing.awareness)
           this.noteLoadTasks.delete(noteId)
-          this.reloadNoteRoomSockets(noteId, 'note_replaced')
-          for (const subscriptionState of this.socketSubscriptions.values()) {
-            if (subscriptionState.roomType === 'workspace') {
-              subscriptionState.awarenessDocIds.delete(noteId)
-            }
-          }
           existing.teardown()
           this.noteGenerations.set(noteId, existing.generation)
         }
@@ -824,15 +704,11 @@ export class WorkspaceRoom {
 
         if (originSocketId) {
           const originSubscription = this.socketSubscriptions.get(originSocketId)
-          if (originSubscription?.roomType === 'workspace') {
-            originSubscription.docIds.add(noteId)
-          }
+          originSubscription?.docIds.add(noteId)
         }
 
         for (const subscriptionState of this.socketSubscriptions.values()) {
-          if (subscriptionState.roomType === 'workspace') {
-            subscriptionState.docIds.add(noteId)
-          }
+          subscriptionState.docIds.add(noteId)
         }
       }
     }
@@ -842,15 +718,10 @@ export class WorkspaceRoom {
         continue
       }
 
-      this.clearTrackedDocAwareness(noteId, noteState.awareness)
       this.noteLoadTasks.delete(noteId)
-      this.reloadNoteRoomSockets(noteId, 'note_removed')
 
       for (const subscriptionState of this.socketSubscriptions.values()) {
-        if (subscriptionState.roomType === 'workspace') {
-          subscriptionState.awarenessDocIds.delete(noteId)
-          subscriptionState.docIds.delete(noteId)
-        }
+        subscriptionState.docIds.delete(noteId)
       }
 
       noteState.teardown()
@@ -990,7 +861,6 @@ export class WorkspaceRoom {
   private handleSocketDocEnvelope(
     socket: Socket,
     payload: WorkspaceDocEnvelope,
-    stage: 'update' | 'awareness',
     apply: (docState: DocState, update: Uint8Array) => void
   ): void {
     if (this.blockedForReplacement || this.destroyed) {
@@ -998,11 +868,10 @@ export class WorkspaceRoom {
     }
 
     const log = this.getSocketLogger(socket.id)
-    const rejectedAction = stage === 'update' ? 'document update' : 'awareness update'
 
     try {
-      const { docState, subscriptionState } = this.requireSubscribedDoc(socket.id, payload, stage)
-      if (stage === 'update' && subscriptionState.capabilities.accessMode === 'readonly') {
+      const { docState, subscriptionState } = this.requireSubscribedDoc(socket.id, payload)
+      if (subscriptionState.capabilities.accessMode === 'readonly') {
         log.warn(
           {
             docId: payload.docId,
@@ -1015,7 +884,7 @@ export class WorkspaceRoom {
       }
 
       if (payload.kind === 'note' && payload.generation !== docState.generation) {
-        throw new Error(`Rejected ${stage} for note ${payload.docId} with stale generation ${payload.generation}`)
+        throw new Error(`Rejected update for note ${payload.docId} with stale generation ${payload.generation}`)
       }
 
       apply(docState, normalizeBinary(payload.update))
@@ -1031,7 +900,7 @@ export class WorkspaceRoom {
           payloadSize: payload.update.byteLength,
           socketId: socket.id,
         },
-        `Ignored invalid ${rejectedAction}`
+        'Ignored invalid document update'
       )
 
       // Stale generations and missing docs can happen transiently during reconnects.
@@ -1041,16 +910,14 @@ export class WorkspaceRoom {
 
   private requireSubscribedDoc(
     socketId: string,
-    docRef: WorkspaceDocRef,
-    stage: 'update' | 'awareness'
+    docRef: WorkspaceDocRef
   ): { docState: DocState; subscriptionState: SocketSubscriptionState } {
     const subscriptionState = this.socketSubscriptions.get(socketId)
     if (!subscriptionState) {
       throw new Error(`Socket ${socketId} is not attached to workspace room ${this.workspaceId}`)
     }
 
-    const subscribedDocIds = stage === 'awareness' ? subscriptionState.awarenessDocIds : subscriptionState.docIds
-    if (!subscribedDocIds.has(docRef.docId)) {
+    if (!subscriptionState.docIds.has(docRef.docId)) {
       throw new Error(`Socket ${socketId} is not subscribed to doc ${docRef.docId}`)
     }
 
@@ -1068,10 +935,6 @@ export class WorkspaceRoom {
       throw new Error(`Socket ${socketId} is not attached to workspace room ${this.workspaceId}`)
     }
 
-    if (subscriptionState.roomType !== 'workspace') {
-      throw new Error(`Socket ${socketId} cannot create notes from room type ${subscriptionState.roomType}`)
-    }
-
     if (!subscriptionState.docIds.has('root')) {
       throw new Error(`Socket ${socketId} is not subscribed to doc root`)
     }
@@ -1085,42 +948,6 @@ export class WorkspaceRoom {
     }
 
     return this.noteStates.get(docRef.docId) ?? null
-  }
-
-  private handleAwarenessBroadcast(
-    docState: DocState,
-    changes: { added: number[]; updated: number[]; removed: number[] },
-    origin: unknown
-  ): void {
-    const changedClients = changes.added.concat(changes.updated, changes.removed)
-    if (changedClients.length === 0) {
-      return
-    }
-
-    const originSocketId = isSocketDocOrigin(origin) ? origin.socketId : null
-    const docId = docState.kind === 'root' ? 'root' : (docState.noteId as string)
-    if (originSocketId) {
-      this.trackSocketClients(originSocketId, docId, changes)
-    }
-
-    const payload = {
-      docId,
-      generation: docState.generation,
-      kind: docState.kind,
-      update: encodeAwarenessUpdate(docState.awareness, changedClients),
-    } satisfies WorkspaceDocEnvelope
-
-    for (const [socketId, socket] of this.sockets) {
-      if (socketId === originSocketId) {
-        continue
-      }
-
-      if (!this.socketSubscriptions.get(socketId)?.awarenessDocIds.has(docId)) {
-        continue
-      }
-
-      socket.emit(SOCKET_EVENT_AWARENESS, payload)
-    }
   }
 
   private broadcastDocumentUpdate(
@@ -1148,20 +975,6 @@ export class WorkspaceRoom {
 
       socket.emit(SOCKET_EVENT_UPDATE, payload)
     }
-  }
-
-  private sendFullAwareness(socket: Socket, docState: DocState): void {
-    const clientIds = Array.from(docState.awareness.getStates().keys())
-    if (clientIds.length === 0) {
-      return
-    }
-
-    socket.emit(SOCKET_EVENT_AWARENESS, {
-      docId: docState.kind === 'root' ? 'root' : (docState.noteId as string),
-      generation: docState.generation,
-      kind: docState.kind,
-      update: encodeAwarenessUpdate(docState.awareness, clientIds),
-    } satisfies WorkspaceDocEnvelope)
   }
 
   private scheduleSave(): void {
@@ -1387,88 +1200,6 @@ export class WorkspaceRoom {
 
   private disconnectAllSockets(): void {
     for (const socket of this.sockets.values()) {
-      socket.disconnect(true)
-    }
-  }
-
-  private trackSocketClients(
-    socketId: string,
-    docId: string,
-    changes: { added: number[]; updated: number[]; removed: number[] }
-  ): void {
-    const clientsByDoc = this.socketClientIds.get(socketId) ?? new Map<string, Set<number>>()
-    const currentClientIds = clientsByDoc.get(docId) ?? new Set<number>()
-
-    for (const clientId of changes.added.concat(changes.updated)) {
-      currentClientIds.add(clientId)
-    }
-
-    for (const clientId of changes.removed) {
-      currentClientIds.delete(clientId)
-    }
-
-    if (currentClientIds.size === 0) {
-      clientsByDoc.delete(docId)
-    } else {
-      clientsByDoc.set(docId, currentClientIds)
-    }
-
-    if (clientsByDoc.size === 0) {
-      this.socketClientIds.delete(socketId)
-      return
-    }
-
-    this.socketClientIds.set(socketId, clientsByDoc)
-  }
-
-  private clearTrackedDocAwareness(docId: string, awareness: Awareness): void {
-    for (const [socketId, clientsByDoc] of Array.from(this.socketClientIds.entries())) {
-      const clientIds = clientsByDoc.get(docId)
-      if (!clientIds || clientIds.size === 0) {
-        continue
-      }
-
-      removeAwarenessStates(awareness, Array.from(clientIds), { docId, socketId })
-
-      const nextClientsByDoc = this.socketClientIds.get(socketId)
-      if (!nextClientsByDoc) {
-        continue
-      }
-
-      nextClientsByDoc.delete(docId)
-      if (nextClientsByDoc.size === 0) {
-        this.socketClientIds.delete(socketId)
-      }
-    }
-  }
-
-  private clearTrackedSocketDocAwareness(socketId: string, docId: string, awareness: Awareness): void {
-    const clientsByDoc = this.socketClientIds.get(socketId)
-    const clientIds = clientsByDoc?.get(docId)
-    if (!clientIds || clientIds.size === 0) {
-      return
-    }
-
-    clientsByDoc?.delete(docId)
-    if (clientsByDoc && clientsByDoc.size === 0) {
-      this.socketClientIds.delete(socketId)
-    }
-
-    removeAwarenessStates(awareness, Array.from(clientIds), { docId, socketId })
-  }
-
-  private reloadNoteRoomSockets(noteId: string, reason: string): void {
-    for (const [socketId, subscriptionState] of Array.from(this.socketSubscriptions.entries())) {
-      if (subscriptionState.roomType !== 'note' || subscriptionState.noteId !== noteId) {
-        continue
-      }
-
-      const socket = this.sockets.get(socketId)
-      if (!socket) {
-        continue
-      }
-
-      socket.emit(SOCKET_EVENT_RELOAD, { reason })
       socket.disconnect(true)
     }
   }

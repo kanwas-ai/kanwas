@@ -1,4 +1,3 @@
-import { Awareness } from 'y-protocols/awareness.js'
 import * as Y from 'yjs'
 import {
   NOTE_CONTENT_KEY,
@@ -11,8 +10,6 @@ import {
 import type {
   CreateNoteBundlePayload,
   CreateNoteBundleNotePayload,
-  WorkspaceAwarenessSubscriptionAction,
-  WorkspaceAwarenessSubscriptionPayload,
   WorkspaceBootstrapDoc,
   WorkspaceBootstrapPayload,
   WorkspaceDocEnvelope,
@@ -24,15 +21,12 @@ import type { DocumentStore } from './document-store.js'
 import type { Logger } from './logger.js'
 
 export type BinaryPayload = ArrayBuffer | Uint8Array | Buffer | number[]
-export type WorkspaceRoomType = 'workspace' | 'note'
 export { NOTE_CONTENT_KEY, findWorkspaceNotesMap, getNoteContentKind }
 export type {
   NoteContentKind,
   NoteDocMeta,
   CreateNoteBundlePayload,
   CreateNoteBundleNotePayload,
-  WorkspaceAwarenessSubscriptionAction,
-  WorkspaceAwarenessSubscriptionPayload,
   WorkspaceBootstrapDoc,
   WorkspaceBootstrapPayload,
   WorkspaceDocEnvelope,
@@ -47,8 +41,6 @@ export interface SocketDocOrigin {
 }
 
 export interface DocState {
-  awareness: Awareness
-  awarenessOrigin: object
   doc: Y.Doc
   docOrigin: object
   generation: number
@@ -69,22 +61,10 @@ export const DEFAULT_SOCKET_CAPABILITIES: SocketCapabilities = {
   accessMode: 'editable',
 }
 
-interface BaseSocketSubscriptionState {
-  awarenessDocIds: Set<string>
+export interface SocketSubscriptionState {
   capabilities: SocketCapabilities
   docIds: Set<string>
 }
-
-export interface WorkspaceSocketSubscriptionState extends BaseSocketSubscriptionState {
-  roomType: 'workspace'
-}
-
-export interface NoteSocketSubscriptionState extends BaseSocketSubscriptionState {
-  noteId: string
-  roomType: 'note'
-}
-
-export type SocketSubscriptionState = WorkspaceSocketSubscriptionState | NoteSocketSubscriptionState
 
 export interface ReplaceDocumentOptions {
   reason: string
@@ -101,19 +81,8 @@ export interface WorkspaceRoomOptions {
 export interface AttachWorkspaceSocketOptions {
   capabilities?: SocketCapabilities
   clientKind?: ClientKind
-  roomType: 'workspace'
   skipBootstrapValidation?: boolean
 }
-
-export interface AttachNoteSocketOptions {
-  capabilities?: SocketCapabilities
-  clientKind?: ClientKind
-  noteId: string
-  roomType: 'note'
-  skipBootstrapValidation?: boolean
-}
-
-export type AttachSocketOptions = AttachWorkspaceSocketOptions | AttachNoteSocketOptions
 
 export interface InitializeRoomOptions {
   skipBootstrapValidation?: boolean

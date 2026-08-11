@@ -72,7 +72,7 @@ The embedded runtime is the boundary between UI state and local resources. It ow
 
 ### `yjs-core`
 
-`yjs-core` contains realtime document mechanics: rooms, synchronization protocol, token checks, awareness, snapshots, and persistence interfaces. It has no standalone entrypoint, cloud object store, deployment configuration, hosted callback, or account/share resolver.
+`yjs-core` contains local document mechanics: one workspace room, root-and-note synchronization, token checks, snapshots, and persistence interfaces. It has no presence protocol, dedicated note rooms, standalone entrypoint, cloud object store, deployment configuration, hosted callback, or account/share resolver.
 
 ### `shared`
 
@@ -91,7 +91,8 @@ Yjs provides:
 - transactional mutations and coherent undo origins,
 - efficient rich-text updates for BlockNote,
 - document/subdocument identity used by the existing canvas model,
-- awareness and connection state inside the application,
+- root and attached-note update fan-out between the renderer and filesystem runtime,
+- reconnect bootstrap and stale-generation protection for the private local channel,
 - a stable seam where persistence can debounce and serialize changes.
 
 Yjs is therefore an in-app editing and synchronization engine. It is not the durable cloud source of truth: the folder wins across restarts, and the persistence layer writes accepted UI changes back to disk.

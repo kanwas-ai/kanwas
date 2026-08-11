@@ -46,9 +46,6 @@ export type {
   WorkspaceBootstrapDoc,
   WorkspaceBootstrapPayload,
   WorkspaceDocMessagePayload,
-  WorkspaceDocAwarenessPayload,
-  WorkspaceAwarenessSubscriptionAction,
-  WorkspaceAwarenessSubscriptionPayload,
   WorkspaceSnapshotBundle,
 } from './workspace/workspace-sync-types.js'
 

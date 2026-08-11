@@ -100,37 +100,22 @@ function createBlockNode(id: string, name: string): NodeItem {
 }
 
 function createWorkspaceContextValue(workspace: TestWorkspace): WorkspaceContextValue {
-  const awareness = new Awareness(workspace.yDoc)
   const localUser: UserIdentity = {
     id: 'local-user',
     name: 'Local User',
     color: '#111111',
   }
 
-  pendingCleanups.push(() => {
-    awareness.destroy()
-  })
-
   return {
     store: workspace.store,
     yDoc: workspace.yDoc,
-    provider: {
-      awareness,
-      acquireNoteAwareness: () => awareness,
-      getNoteAwareness: () => awareness,
-      releaseNoteAwareness: () => {},
-    } as WorkspaceContextValue['provider'],
+    provider: {} as WorkspaceContextValue['provider'],
     localUser,
-    acquireCursorPresenceSuppression: () => () => {},
-    isCursorPresenceSuppressed: () => false,
     contentStore: createWorkspaceContentStore(workspace.yDoc),
     workspaceUndoController: workspace.undoController,
     sharedEditorUndoManager: workspace.undoController.undoManager as unknown as Y.UndoManager,
-    hasInitiallySynced: true,
-    initialSyncError: null,
-    isConnected: true,
-    isReconnecting: false,
-    disconnectReason: null,
+    sessionState: 'ready',
+    sessionError: null,
     workspaceId: 'workspace-test',
     activeCanvasId: 'root',
     setActiveCanvasId: () => {},

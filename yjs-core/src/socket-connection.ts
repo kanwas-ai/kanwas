@@ -3,22 +3,15 @@ import { getErrorLogContext } from './error-utils.js'
 import { bindLoggerContext, type Logger } from './logger.js'
 import type { OperationContext } from './operation-context.js'
 import type { SocketTokenVerifier } from './socket-token-verifier.js'
-import {
-  SOCKET_EVENT_AWARENESS,
-  SOCKET_EVENT_AWARENESS_SUBSCRIPTION,
-  SOCKET_EVENT_CREATE_NOTE_BUNDLE,
-  SOCKET_EVENT_UPDATE,
-} from './protocol.js'
+import { SOCKET_EVENT_CREATE_NOTE_BUNDLE, SOCKET_EVENT_UPDATE } from './protocol.js'
 import { RoomManager } from './room-manager.js'
 import {
-  type AttachSocketOptions,
+  type AttachWorkspaceSocketOptions,
   type ClientKind,
   type CreateNoteBundlePayload,
   type InitializeRoomOptions,
   type SocketCapabilities,
-  type WorkspaceAwarenessSubscriptionPayload,
   type WorkspaceDocEnvelope,
-  type WorkspaceRoomType,
 } from './room-types.js'
 
 function isWorkspaceDocEnvelope(value: unknown): value is WorkspaceDocEnvelope {
@@ -36,18 +29,6 @@ function isWorkspaceDocEnvelope(value: unknown): value is WorkspaceDocEnvelope {
     Number.isSafeInteger(payload.generation) &&
     (payload.kind === 'root' || payload.kind === 'note') &&
     payload.update instanceof Uint8Array
-  )
-}
-
-function isWorkspaceAwarenessSubscriptionPayload(value: unknown): value is WorkspaceAwarenessSubscriptionPayload {
-  const payload = value as { action?: unknown; docId?: unknown; kind?: unknown }
-
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof payload.docId === 'string' &&
-    (payload.kind === 'root' || payload.kind === 'note') &&
-    (payload.action === 'subscribe' || payload.action === 'unsubscribe')
   )
 }
 
@@ -116,33 +97,29 @@ export async function handleSocketConnection(
     return
   }
 
-  const roomType = resolveRoomType(socket)
-  const noteId = roomType === 'note' ? resolveNoteId(socket) : null
-  const clientKind = resolveClientKind(socket)
-  const initializeOptions: InitializeRoomOptions = {
-    skipBootstrapValidation: resolveSkipBootstrapValidation(socket),
-  }
-  if (roomType === 'note' && !noteId) {
+  const requestedRoomType = resolveRequestedRoomType(socket)
+  if (requestedRoomType !== null && requestedRoomType !== 'workspace') {
     socketLogger.warn(
       {
-        hasCorrelationId: Boolean(socketContext.correlationId),
         remoteAddress: getSocketRemoteAddress(socket),
-        roomType,
+        requestedRoomType,
         socketId: socket.id,
         workspaceId,
       },
-      'Rejecting note room socket connection without noteId'
+      'Rejecting unsupported Yjs room type'
     )
     socket.disconnect(true)
     return
   }
 
+  const clientKind = resolveClientKind(socket)
+  const initializeOptions: InitializeRoomOptions = {
+    skipBootstrapValidation: resolveSkipBootstrapValidation(socket),
+  }
   const workspaceContext = {
     correlationId: socketContext.correlationId,
     logger: bindLoggerContext(socketLogger, {
       clientKind,
-      noteId: noteId ?? undefined,
-      roomType,
       workspaceId,
     }),
   } satisfies OperationContext
@@ -187,28 +164,12 @@ export async function handleSocketConnection(
   let attached = false
   const pendingUpdates: WorkspaceDocEnvelope[] = []
   const pendingCreateNoteBundles: CreateNoteBundlePayload[] = []
-  const pendingAwarenessSubscriptions: WorkspaceAwarenessSubscriptionPayload[] = []
-  const pendingAwarenessUpdates: WorkspaceDocEnvelope[] = []
 
   const dispatchUpdate = (
     nextRoom: Awaited<ReturnType<RoomManager['getRoom']>>,
     payload: WorkspaceDocEnvelope
   ): void => {
     nextRoom.handleUpdate(socket, payload)
-  }
-
-  const dispatchAwareness = (
-    nextRoom: Awaited<ReturnType<RoomManager['getRoom']>>,
-    payload: WorkspaceDocEnvelope
-  ): void => {
-    nextRoom.handleAwarenessUpdate(socket, payload)
-  }
-
-  const dispatchAwarenessSubscription = (
-    nextRoom: Awaited<ReturnType<RoomManager['getRoom']>>,
-    payload: WorkspaceAwarenessSubscriptionPayload
-  ): void => {
-    nextRoom.handleAwarenessSubscription(socket, payload)
   }
 
   const dispatchCreateNoteBundle = (
@@ -234,38 +195,6 @@ export async function handleSocketConnection(
     socket,
   })
 
-  const handleAwareness = createQueuedEventHandler({
-    getRoom: () => room,
-    isReady: () => attached,
-    isValid: isWorkspaceDocEnvelope,
-    onError: (payload, error) => {
-      handleSocketEventError(workspaceContext, socket, 'socket_awareness_event', error, {
-        docId: payload.docId,
-        payloadSize: payload.update.byteLength,
-        workspaceId,
-      })
-    },
-    onReady: dispatchAwareness,
-    pending: pendingAwarenessUpdates,
-    socket,
-  })
-
-  const handleAwarenessSubscription = createQueuedEventHandler({
-    getRoom: () => room,
-    isReady: () => attached,
-    isValid: isWorkspaceAwarenessSubscriptionPayload,
-    onError: (payload, error) => {
-      handleSocketEventError(workspaceContext, socket, 'socket_awareness_subscription_event', error, {
-        action: payload.action,
-        docId: payload.docId,
-        workspaceId,
-      })
-    },
-    onReady: dispatchAwarenessSubscription,
-    pending: pendingAwarenessSubscriptions,
-    socket,
-  })
-
   const handleCreateNoteBundle = createQueuedEventHandler({
     getRoom: () => room,
     isReady: () => attached,
@@ -288,10 +217,8 @@ export async function handleSocketConnection(
     if (!room) {
       socketLogger.info(
         {
-          noteId: noteId ?? undefined,
           reason,
           remoteAddress: getSocketRemoteAddress(socket),
-          roomType,
           socketId: socket.id,
           workspaceId,
         },
@@ -304,10 +231,8 @@ export async function handleSocketConnection(
     workspaceContext.logger?.info(
       {
         connectionCount: room.connectionCount,
-        noteId: noteId ?? undefined,
         reason,
         remoteAddress: getSocketRemoteAddress(socket),
-        roomType,
         socketId: socket.id,
         workspaceId,
       },
@@ -323,8 +248,6 @@ export async function handleSocketConnection(
 
   socket.on(SOCKET_EVENT_UPDATE, handleUpdate)
   socket.on(SOCKET_EVENT_CREATE_NOTE_BUNDLE, handleCreateNoteBundle)
-  socket.on(SOCKET_EVENT_AWARENESS, handleAwareness)
-  socket.on(SOCKET_EVENT_AWARENESS_SUBSCRIPTION, handleAwarenessSubscription)
   socket.on('disconnect', handleDisconnect)
 
   try {
@@ -348,21 +271,11 @@ export async function handleSocketConnection(
     return
   }
 
-  const attachOptions: AttachSocketOptions =
-    roomType === 'workspace'
-      ? {
-          capabilities: socketCapabilities,
-          clientKind,
-          roomType: 'workspace',
-          skipBootstrapValidation: initializeOptions.skipBootstrapValidation,
-        }
-      : {
-          capabilities: socketCapabilities,
-          clientKind,
-          roomType: 'note',
-          noteId: noteId as string,
-          skipBootstrapValidation: initializeOptions.skipBootstrapValidation,
-        }
+  const attachOptions: AttachWorkspaceSocketOptions = {
+    capabilities: socketCapabilities,
+    clientKind,
+    skipBootstrapValidation: initializeOptions.skipBootstrapValidation,
+  }
 
   await room.attachSocket(socket, attachOptions, workspaceContext)
   attached = true
@@ -403,45 +316,12 @@ export async function handleSocketConnection(
     return
   }
 
-  if (
-    !(await drainQueuedPayloads(
-      room,
-      pendingAwarenessSubscriptions,
-      dispatchAwarenessSubscription,
-      (payload, error) => {
-        handleSocketEventError(workspaceContext, socket, 'socket_awareness_subscription_event', error, {
-          action: payload.action,
-          docId: payload.docId,
-          workspaceId,
-        })
-      }
-    ))
-  ) {
-    return
-  }
-
-  if (
-    !(await drainQueuedPayloads(room, pendingAwarenessUpdates, dispatchAwareness, (payload, error) => {
-      handleSocketEventError(workspaceContext, socket, 'socket_awareness_event', error, {
-        docId: payload.docId,
-        payloadSize: payload.update.byteLength,
-        workspaceId,
-      })
-    }))
-  ) {
-    return
-  }
-
   workspaceContext.logger?.info(
     {
       connectionCount: room.connectionCount,
-      noteId: noteId ?? undefined,
-      pendingAwarenessSubscriptionCount: pendingAwarenessSubscriptions.length,
-      pendingAwarenessMessageCount: pendingAwarenessUpdates.length,
       pendingUpdateCount: pendingUpdates.length,
       clientKind,
       remoteAddress: getSocketRemoteAddress(socket),
-      roomType,
       socketAccessMode: socketCapabilities.accessMode,
       socketId: socket.id,
       workspaceId,
@@ -491,10 +371,6 @@ function resolveWorkspaceId(socket: Socket): string | null {
   return resolveHandshakeStringValue(socket, 'workspaceId')
 }
 
-function resolveNoteId(socket: Socket): string | null {
-  return resolveHandshakeStringValue(socket, 'noteId')
-}
-
 function resolveSocketCorrelationId(socket: Socket): string | undefined {
   return resolveHandshakeStringValue(socket, 'correlationId') ?? undefined
 }
@@ -512,23 +388,27 @@ function resolveClientKind(socket: Socket): ClientKind {
   return 'unknown'
 }
 
-function resolveRoomType(socket: Socket): WorkspaceRoomType {
+function resolveRequestedRoomType(socket: Socket): string | null {
   const authValue = socket.handshake.auth.roomType
-  if (authValue === 'note') {
-    return 'note'
+  if (typeof authValue === 'string' && authValue.length > 0) {
+    return authValue
   }
 
   const queryValue = socket.handshake.query.roomType
-  if (queryValue === 'note') {
-    return 'note'
+  if (typeof queryValue === 'string' && queryValue.length > 0) {
+    return queryValue
   }
 
-  return 'workspace'
+  if (Array.isArray(queryValue) && typeof queryValue[0] === 'string' && queryValue[0].length > 0) {
+    return queryValue[0]
+  }
+
+  return null
 }
 
 function resolveHandshakeStringValue(
   socket: Socket,
-  key: 'workspaceId' | 'correlationId' | 'noteId' | 'clientKind' | 'socketToken'
+  key: 'workspaceId' | 'correlationId' | 'clientKind' | 'socketToken'
 ): string | null {
   const authValue = socket.handshake.auth[key]
   if (typeof authValue === 'string' && authValue.length > 0) {

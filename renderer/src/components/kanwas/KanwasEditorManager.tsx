@@ -6,7 +6,6 @@ import type { CanvasItem } from 'shared'
 import * as Y from 'yjs'
 import { useWorkspace } from '@/providers/workspace'
 import { useNoteBlockNoteBinding } from '@/hooks/useNoteBlockNoteBinding'
-import { useBlockNoteCollaborationUserInfo } from '@/hooks/useBlockNoteCollaborationUserInfo'
 import { blockNoteSchema } from '@/lib/blocknote-schema'
 import { useClearMountedKanwasEditor, useSetMountedKanwasEditor } from '@/providers/project-state'
 import { findCanonicalKanwasNode } from '@/lib/workspaceUtils'
@@ -39,8 +38,6 @@ function MountedKanwasEditor({
     },
   })
 
-  useBlockNoteCollaborationUserInfo(editor, localUser)
-
   useEffect(() => {
     setMountedKanwasEditor(editorNodeId, editor as never)
 
@@ -57,9 +54,7 @@ function MountedKanwasEditor({
 }
 
 function MountedKanwasEditorWithFragment({ editorNodeId }: { editorNodeId: string }) {
-  const { fragment, editorKey, collaborationProvider, undoManager } = useNoteBlockNoteBinding(editorNodeId, {
-    awareness: 'isolated',
-  })
+  const { fragment, editorKey, collaborationProvider, undoManager } = useNoteBlockNoteBinding(editorNodeId)
 
   if (!fragment) {
     return null

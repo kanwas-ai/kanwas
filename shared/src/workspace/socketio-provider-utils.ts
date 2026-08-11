@@ -1,7 +1,6 @@
 import * as Y from 'yjs'
 
 export type BinaryPayload = ArrayBuffer | Uint8Array | number[]
-export type AwarenessChanges = { added: number[]; updated: number[]; removed: number[] }
 export type ProviderParams =
   | Record<string, string | null | undefined>
   | (() => Record<string, string | null | undefined>)
@@ -51,10 +50,6 @@ export function installWebSocketPolyfill(WebSocketPolyfill?: typeof globalThis.W
 
 export function isDocReady(doc: Y.Doc): boolean {
   return doc.share.size > 0
-}
-
-export function collectChangedClients(changes: AwarenessChanges): number[] {
-  return changes.added.concat(changes.updated, changes.removed)
 }
 
 function isLocalHost(host: string): boolean {

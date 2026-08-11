@@ -24,15 +24,6 @@ vi.mock('@/hooks/workspaceStorage', () => ({
   setCanvasViewport: (...args: unknown[]) => setCanvasViewportMock(...args),
 }))
 
-vi.mock('@/lib/CursorManager', () => ({
-  default: class CursorManagerMock {
-    attach() {}
-    destroy() {}
-    refresh() {}
-    setReactFlowInstance() {}
-  },
-}))
-
 function createNode(id: string, x: number, y: number): NodeItem {
   return {
     kind: 'node',
@@ -99,14 +90,7 @@ function FolderOpenFitProbe({
     deferDefaultViewportRestore: true,
     focusMode: false,
     savedViewport: null,
-    provider: {} as never,
-    localUserId: 'user-1',
-    isCursorPresenceSuppressed: () => false,
-    acquireCursorPresenceSuppression: () => () => undefined,
-    screenToFlowPosition: (() => ({ x: 0, y: 0 })) as never,
-    flowToScreenPosition: (() => ({ x: 0, y: 0 })) as never,
     setViewport: setViewport as never,
-    canvasSurfaceRef,
   })
 
   useInitialCanvasFitRequest({

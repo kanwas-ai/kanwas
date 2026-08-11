@@ -87,9 +87,9 @@ export {
 } from './workspace/audit.js'
 export type { ParsedAuditActor, AuditIdentity, MetadataAuditActorIdentity } from './workspace/audit.js'
 
-// Export workspace client
-export { connectToWorkspace, connectToNote } from './workspace/client.js'
-export type { ConnectOptions, WorkspaceConnection, ConnectNoteOptions, NoteConnection } from './workspace/client.js'
+// Export local workspace client
+export { connectToWorkspace } from './workspace/client.js'
+export type { ConnectOptions, WorkspaceConnection } from './workspace/client.js'
 export { WorkspaceSocketProvider } from './workspace/socketio-provider.js'
 export type {
   WorkspaceProviderStatus,
@@ -98,15 +98,6 @@ export type {
   WorkspaceProviderOptions,
   WorkspaceSocketProviderInstance,
 } from './workspace/socketio-provider.js'
-export { NoteSocketProvider } from './workspace/note-socketio-provider.js'
-export type {
-  NoteProviderStatus,
-  NoteProviderStatusEvent,
-  NoteReloadEvent,
-  NoteProviderOptions,
-  NoteSocketProviderInstance,
-} from './workspace/note-socketio-provider.js'
-
 // Export workspace utilities (browser-safe)
 export { once } from './utils/once.js'
 export { isFileSection, parseFileSection } from './section.js'
@@ -175,10 +166,7 @@ export type {
   WorkspaceBootstrapDoc,
   WorkspaceBootstrapPayload,
   WorkspaceDocMessagePayload,
-  WorkspaceDocAwarenessPayload,
   CreateNoteBundlePayload,
-  WorkspaceAwarenessSubscriptionAction,
-  WorkspaceAwarenessSubscriptionPayload,
   WorkspaceSnapshotBundle,
 } from './workspace/workspace-sync-types.js'
 export { decodeBootstrapPayload, encodeBootstrapPayload } from './workspace/bootstrap-codec.js'

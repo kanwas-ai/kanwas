@@ -10,8 +10,6 @@ import { NodeSideToolbar } from './NodeSideToolbar'
 import { FONT_CSS } from './nodeConstants'
 import { ResizeHandle, RESIZE_HANDLE_SIZE } from './ResizeHandle'
 import { useNodeData, useFontChangeAll } from './useNodeData'
-import { useCanvasCursorSuppressionWhileEditorFocused } from '@/hooks/useCanvasCursorSuppression'
-import { useBlockNoteCollaborationUserInfo } from '@/hooks/useBlockNoteCollaborationUserInfo'
 import { useNoteBlockNoteBinding } from '@/hooks/useNoteBlockNoteBinding'
 import { useNoteFileAutosave } from '@/hooks/useNoteFileAutosave'
 import { computeMaxStickyFont, useStickyTextAutoFit } from '@/hooks/useStickyTextAutoFit'
@@ -110,8 +108,6 @@ function StickyNoteEditorInner({
     },
   })
 
-  useBlockNoteCollaborationUserInfo(editor, localUser)
-  useCanvasCursorSuppressionWhileEditorFocused(editor)
   useNoteFileAutosave({ editor, nodeId, fragment })
   useStickyTextAutoFit({ wrapperRef, nodeWidth, nodeHeight })
 

@@ -296,34 +296,6 @@ html {
   --primary-button-shadow: 0 2px 2px rgba(0, 0, 0, 0.25);
 }
 
-.bn-editor .bn-detached-agent-cursor {
-  pointer-events: none;
-}
-
-.bn-editor .bn-detached-agent-cursor .bn-collaboration-cursor__caret {
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.15),
-    0 0 10px rgb(124 58 237 / 0.35);
-  animation: detached-agent-cursor-blink 1.05s steps(1) infinite;
-}
-
-.bn-editor .bn-detached-agent-cursor .bn-collaboration-cursor__label {
-  letter-spacing: 0.01em;
-  box-shadow: 0 4px 14px rgb(124 58 237 / 0.22);
-}
-
-@keyframes detached-agent-cursor-blink {
-  0%,
-  46% {
-    opacity: 1;
-  }
-
-  47%,
-  100% {
-    opacity: 0.45;
-  }
-}
-
 /* Tailwind theme with descriptive color names */
 @theme {
   /* Backgrounds */

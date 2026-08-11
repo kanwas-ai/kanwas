@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import React, { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as Y from 'yjs'
 import { createYjsProxy } from 'valtio-y'
 import {
@@ -17,6 +17,8 @@ import { LOCAL_USER_IDENTITY } from '@/lib/userIdentity'
 import { useYjsSocketToken } from './useYjsSocketToken'
 
 const INITIAL_SYNC_TIMEOUT_MS = 30_000
+const SESSION_RECOVERY_GRACE_MS = 5_000
+const SESSION_INTERRUPTED_MESSAGE = 'Local workspace session was interrupted. Reload Workspace to continue safely.'
 
 interface WorkspaceProviderProps {
   children: ReactNode
@@ -27,13 +29,9 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
   const yDoc = useMemo(() => new Y.Doc(), [])
   const localUser = LOCAL_USER_IDENTITY
   const [activeCanvasId, setActiveCanvasId] = useState<string | null>(null)
-  const [hasInitiallySynced, setHasInitiallySynced] = useState(false)
-  const [initialSyncError, setInitialSyncError] = useState<string | null>(null)
-  const [isConnected, setIsConnected] = useState(false)
-  const [isReconnecting, setIsReconnecting] = useState(false)
-  const [disconnectReason, setDisconnectReason] = useState<string | null>(null)
+  const [sessionState, setSessionState] = useState<WorkspaceContextValue['sessionState']>('opening')
+  const [sessionError, setSessionError] = useState<string | null>(null)
   const textSelectionStore = useMemo(() => createTextSelectionStore(), [])
-  const cursorSuppressionTokensRef = useRef(new Set<symbol>())
   const yjsServerUrl = baseURL
 
   // Create a Valtio proxy that's automatically synchronized by Yjs.
@@ -78,11 +76,11 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
 
   useEffect(() => {
     if (socketTokenError) {
-      setInitialSyncError(`Workspace sync failed: ${socketTokenError.message}`)
+      setSessionError(`Could not start the local workspace session: ${socketTokenError.message}`)
     }
   }, [socketTokenError])
 
-  // Track readiness state: hasInitiallySynced (one-way) and isConnected (live status)
+  // Present the embedded document channel as a local session, not as a remote service.
   useEffect(() => {
     if (!isSocketTokenReady) {
       return
@@ -90,99 +88,123 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
 
     let lastConnectionErrorMessage: string | null = null
     let initialSyncCompleted = provider.synced
+    let reloadRequired = false
+    let recoveryTimeoutId: number | null = null
+
+    const clearRecoveryTimeout = () => {
+      if (recoveryTimeoutId === null) {
+        return
+      }
+
+      window.clearTimeout(recoveryTimeoutId)
+      recoveryTimeoutId = null
+    }
+
+    const markReady = () => {
+      if (reloadRequired) {
+        return
+      }
+
+      clearRecoveryTimeout()
+      setSessionError(null)
+      setSessionState('ready')
+    }
+
+    const markRecovering = () => {
+      if (!initialSyncCompleted || reloadRequired) {
+        return
+      }
+
+      setSessionError(null)
+      setSessionState('recovering')
+      if (recoveryTimeoutId !== null) {
+        return
+      }
+
+      recoveryTimeoutId = window.setTimeout(() => {
+        recoveryTimeoutId = null
+        if (provider.connected && provider.synced) {
+          markReady()
+          return
+        }
+
+        setSessionError(SESSION_INTERRUPTED_MESSAGE)
+        setSessionState('interrupted')
+      }, SESSION_RECOVERY_GRACE_MS)
+    }
 
     const handleSync = (synced: boolean) => {
       if (synced) {
         initialSyncCompleted = true
-        setInitialSyncError(null)
-        setHasInitiallySynced(true) // Once true, never goes back to false
+        markReady()
+      } else {
+        markRecovering()
       }
     }
 
     const handleStatus = () => {
-      setIsConnected(provider.connected)
-      setIsReconnecting(provider.isReconnecting)
-      setDisconnectReason(provider.lastDisconnectReason)
+      if (provider.connected && provider.synced) {
+        markReady()
+      } else {
+        markRecovering()
+      }
     }
 
     const handleConnectionError = (error: Error) => {
       lastConnectionErrorMessage = error.message
       if (!initialSyncCompleted) {
-        setInitialSyncError(`Workspace sync failed: ${error.message}`)
+        setSessionError(`Could not open the local workspace: ${error.message}`)
+      } else {
+        markRecovering()
       }
+    }
+
+    const handleReloadRequired = () => {
+      reloadRequired = true
+      clearRecoveryTimeout()
+      setSessionError(SESSION_INTERRUPTED_MESSAGE)
+      setSessionState('interrupted')
     }
 
     const timeoutId = window.setTimeout(() => {
-      if (provider.synced) {
+      if (initialSyncCompleted || provider.synced) {
         return
       }
 
-      setInitialSyncError(
+      setSessionError(
         lastConnectionErrorMessage
-          ? `Workspace sync timed out: ${lastConnectionErrorMessage}`
-          : `Workspace sync timed out after ${INITIAL_SYNC_TIMEOUT_MS / 1000}s`
+          ? `The local workspace did not open: ${lastConnectionErrorMessage}`
+          : `The local workspace did not open within ${INITIAL_SYNC_TIMEOUT_MS / 1000} seconds.`
       )
     }, INITIAL_SYNC_TIMEOUT_MS)
 
-    // Check current state immediately
     if (provider.synced) {
       initialSyncCompleted = true
-      setInitialSyncError(null)
-      setHasInitiallySynced(true)
+      markReady()
+    } else {
+      setSessionState('opening')
     }
-    setIsConnected(provider.connected)
-    setIsReconnecting(provider.isReconnecting)
-    setDisconnectReason(provider.lastDisconnectReason)
 
-    provider.on('synced', handleSync)
     provider.on('sync', handleSync)
     provider.on('status', handleStatus)
     provider.on('connection-error', handleConnectionError)
+    provider.on('reload', handleReloadRequired)
 
     return () => {
       window.clearTimeout(timeoutId)
-      provider.off('synced', handleSync)
+      clearRecoveryTimeout()
       provider.off('sync', handleSync)
       provider.off('status', handleStatus)
       provider.off('connection-error', handleConnectionError)
+      provider.off('reload', handleReloadRequired)
     }
   }, [isSocketTokenReady, provider])
-
-  useEffect(() => {
-    const handleReload = () => {
-      window.location.reload()
-    }
-
-    provider.on('reload', handleReload)
-    return () => provider.off('reload', handleReload)
-  }, [provider])
 
   const workspaceUndoController = useMemo(() => new WorkspaceUndoController(yDoc), [yDoc])
   const sharedEditorUndoManager = useMemo(
     () => workspaceUndoController.undoManager as unknown as Y.UndoManager,
     [workspaceUndoController]
   )
-
-  const acquireCursorPresenceSuppression = useCallback(() => {
-    const token = Symbol('cursor-presence-suppression')
-    let released = false
-
-    cursorSuppressionTokensRef.current.add(token)
-    provider.awareness.setLocalStateField('appCursor', null)
-
-    return () => {
-      if (released) {
-        return
-      }
-
-      released = true
-      cursorSuppressionTokensRef.current.delete(token)
-    }
-  }, [provider])
-
-  const isCursorPresenceSuppressed = useCallback(() => {
-    return cursorSuppressionTokensRef.current.size > 0
-  }, [])
 
   useEffect(() => {
     return () => {
@@ -193,36 +215,17 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
     }
   }, [provider, workspaceUndoController, yDoc, dispose])
 
-  useEffect(() => {
-    provider.awareness.setLocalStateField('appUser', localUser)
-  }, [localUser, provider])
-
-  useEffect(() => {
-    const cursorSuppressionTokens = cursorSuppressionTokensRef.current
-
-    return () => {
-      cursorSuppressionTokens.clear()
-      provider.awareness.setLocalStateField('appCursor', null)
-      provider.awareness.setLocalStateField('appUser', null)
-    }
-  }, [provider])
-
   const value = useMemo<WorkspaceContextValue>(
     () => ({
       store,
       yDoc,
       provider,
       localUser,
-      acquireCursorPresenceSuppression,
-      isCursorPresenceSuppressed,
       contentStore,
       workspaceUndoController,
       sharedEditorUndoManager,
-      hasInitiallySynced,
-      initialSyncError,
-      isConnected,
-      isReconnecting,
-      disconnectReason,
+      sessionState,
+      sessionError,
       workspaceId,
       activeCanvasId,
       setActiveCanvasId,
@@ -232,16 +235,11 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
       yDoc,
       provider,
       localUser,
-      acquireCursorPresenceSuppression,
-      isCursorPresenceSuppressed,
       contentStore,
       workspaceUndoController,
       sharedEditorUndoManager,
-      hasInitiallySynced,
-      initialSyncError,
-      isConnected,
-      isReconnecting,
-      disconnectReason,
+      sessionState,
+      sessionError,
       workspaceId,
       activeCanvasId,
     ]

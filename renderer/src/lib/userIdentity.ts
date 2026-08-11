@@ -6,7 +6,7 @@ export interface UserIdentity {
   color: string
 }
 
-/** Single-instance desktop identity used for collaboration presence and audit metadata. */
+/** Fixed single-instance desktop identity used for local audit metadata and editor configuration. */
 export const LOCAL_USER_IDENTITY: UserIdentity = {
   ...LOCAL_USER,
   color: '#e8a300',

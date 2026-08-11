@@ -26,7 +26,6 @@
   "dependencies": {
     "shared": "workspace:*",
     "socket.io": "^4.8.1",
-    "y-protocols": "^1.0.6",
     "yjs": "^13.6.27"
   },
   "devDependencies": {

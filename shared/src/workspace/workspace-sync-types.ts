@@ -29,8 +29,6 @@ export interface WorkspaceBootstrapPayload {
 
 export interface WorkspaceDocMessagePayload extends WorkspaceDocEnvelope {}
 
-export interface WorkspaceDocAwarenessPayload extends WorkspaceDocEnvelope {}
-
 export interface CreateNoteBundleNotePayload {
   noteId: string
   noteKind: NoteContentKind
@@ -40,12 +38,6 @@ export interface CreateNoteBundleNotePayload {
 export interface CreateNoteBundlePayload {
   notes: CreateNoteBundleNotePayload[]
   rootUpdate: Uint8Array
-}
-
-export type WorkspaceAwarenessSubscriptionAction = 'subscribe' | 'unsubscribe'
-
-export interface WorkspaceAwarenessSubscriptionPayload extends WorkspaceDocRef {
-  action: WorkspaceAwarenessSubscriptionAction
 }
 
 export interface WorkspaceSnapshotBundle {

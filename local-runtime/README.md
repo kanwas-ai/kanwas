@@ -5,9 +5,10 @@ library, not a command-line program or independently managed process. Electron
 calls `startLocalRuntime()` during startup and closes the returned handle when
 the app quits.
 
-The runtime connects the renderer to local folders, Yjs rooms, terminal
-sessions, and MCP through one loopback HTTP server. A selected folder is called
-a **vault** and remains the durable source of truth.
+The runtime connects the renderer to local folders, a private Yjs document
+session, terminal sessions, and MCP through one loopback HTTP server. The Yjs
+channel synchronizes documents only; it does not carry presence. A selected
+folder is called a **vault** and remains the durable source of truth.
 
 ## Lifecycle API
 

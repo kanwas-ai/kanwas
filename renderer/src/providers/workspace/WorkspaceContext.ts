@@ -18,28 +18,22 @@ export interface TextSelectionStore {
   subscribe: (listener: () => void) => () => void
 }
 
+export type WorkspaceSessionState = 'opening' | 'ready' | 'recovering' | 'interrupted'
+
 export interface WorkspaceContextValue {
   store: WorkspaceDocument
   yDoc: Y.Doc
   provider: WorkspaceSocketProviderInstance
   localUser: UserIdentity
-  acquireCursorPresenceSuppression: () => () => void
-  isCursorPresenceSuppressed: () => boolean
   contentStore: WorkspaceContentStore
   /** Logical workspace undo/redo controller across root + note docs */
   workspaceUndoController: WorkspaceUndoController
   /** Shared multi-doc UndoManager passed to BlockNote/y-prosemirror */
   sharedEditorUndoManager: Y.UndoManager
-  /** True once the initial sync with the Yjs server has completed. Never resets to false. */
-  hasInitiallySynced: boolean
-  /** Initial sync failure shown while the workspace is still blocked on bootstrap. */
-  initialSyncError: string | null
-  /** True when WebSocket is currently connected. Can toggle on reconnections. */
-  isConnected: boolean
-  /** True when the provider is actively attempting to reconnect after a transient disconnect. */
-  isReconnecting: boolean
-  /** Most recent Socket.IO disconnect reason after initial sync. */
-  disconnectReason: string | null
+  /** Product-level health of the embedded local document session. */
+  sessionState: WorkspaceSessionState
+  /** User-facing local session failure, with no transport-specific terminology. */
+  sessionError: string | null
   workspaceId: string
   activeCanvasId: string | null
   setActiveCanvasId: (id: string | null) => void

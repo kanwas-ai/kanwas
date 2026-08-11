@@ -26,7 +26,6 @@ import type { SearchResult } from '@/hooks/useWorkspaceSearch'
 import { showToast } from '@/utils/toast'
 import { WorkspaceInterlinksProvider } from '@/providers/workspace-interlinks'
 import { buildWorkspaceInterlinkSuggestions } from '@/lib/workspaceInterlinks'
-import { describeConnectionLoss } from '@/lib/liveConnection'
 import { useWorkspaceStructure } from '@/hooks/useWorkspaceStructure'
 import thinkingAnimation from '@/assets/thinking-animation.png'
 import {
@@ -39,8 +38,6 @@ import {
   shouldKeepProgrammaticNodeTarget,
 } from './workspacePageState'
 
-const RECONNECTING_INDICATOR_DELAY_MS = 20_000
-
 // The card style editor is a dev-only tool. It's always available in `pnpm dev`,
 // and can be opted into elsewhere (e.g. the Electron shell) by setting this
 // localStorage flag to '1' — never enabled for regular production users by default.
@@ -51,19 +48,8 @@ function areStringArraysEqual(left: readonly string[], right: readonly string[])
 }
 
 function WorkspaceContent({ routeCanvasPath }: { routeCanvasPath: string }) {
-  const {
-    store,
-    yDoc,
-    contentStore,
-    hasInitiallySynced,
-    initialSyncError,
-    isConnected,
-    isReconnecting,
-    disconnectReason,
-    workspaceId,
-    activeCanvasId,
-    setActiveCanvasId,
-  } = useWorkspace()
+  const { store, yDoc, contentStore, sessionState, sessionError, workspaceId, activeCanvasId, setActiveCanvasId } =
+    useWorkspace()
   const textSelectionStore = useTextSelectionStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -84,9 +70,8 @@ function WorkspaceContent({ routeCanvasPath }: { routeCanvasPath: string }) {
   useUiContextReporter(workspaceId, activeCanvasId, selectedNodeIds)
   // Canvas transition state for fade effect
   const [canvasOpacity, setCanvasOpacity] = useState(1)
-  const [showReconnectIndicator, setShowReconnectIndicator] = useState(false)
   const prevCanvasIdRef = useRef<string | null>(null)
-  const disconnectDetail = describeConnectionLoss(disconnectReason)
+  const workspaceHasOpened = sessionState !== 'opening'
 
   // Keep activeCanvasId in ref for stable callbacks (prevents react-arborist drag breakage)
   const activeCanvasIdRef = useRef<string | null>(activeCanvasId)
@@ -111,7 +96,7 @@ function WorkspaceContent({ routeCanvasPath }: { routeCanvasPath: string }) {
 
   const normalizedRouteCanvasPath = useMemo(() => normalizeRouteCanvasPath(routeCanvasPath), [routeCanvasPath])
   const resolvedRouteCanvasId = useMemo(() => {
-    if (!hasInitiallySynced || !store.root) {
+    if (!workspaceHasOpened || !store.root) {
       return null
     }
 
@@ -120,7 +105,7 @@ function WorkspaceContent({ routeCanvasPath }: { routeCanvasPath: string }) {
     }
 
     return resolveCanvasFromRoute(store.root, normalizedRouteCanvasPath)
-  }, [hasInitiallySynced, normalizedRouteCanvasPath, store.root])
+  }, [normalizedRouteCanvasPath, store.root, workspaceHasOpened])
 
   // Keyboard shortcuts to open search
   useKeyboardShortcut(' ', () => setIsSearchOpen(true), { ctrl: true, skipInputs: false, preventDefault: true })
@@ -206,7 +191,7 @@ function WorkspaceContent({ routeCanvasPath }: { routeCanvasPath: string }) {
   }, [])
 
   useEffect(() => {
-    if (!hasInitiallySynced || !store.root) {
+    if (!workspaceHasOpened || !store.root) {
       return
     }
 
@@ -223,12 +208,12 @@ function WorkspaceContent({ routeCanvasPath }: { routeCanvasPath: string }) {
     }
   }, [
     activeCanvasId,
-    hasInitiallySynced,
     navigateToCanvas,
     normalizedRouteCanvasPath,
     resolvedRouteCanvasId,
     setActiveCanvasId,
     store.root,
+    workspaceHasOpened,
   ])
 
   useEffect(() => {
@@ -246,7 +231,7 @@ function WorkspaceContent({ routeCanvasPath }: { routeCanvasPath: string }) {
   }, [activeCanvasId])
 
   useEffect(() => {
-    if (!hasInitiallySynced || !store.root || !activeCanvasId) {
+    if (!workspaceHasOpened || !store.root || !activeCanvasId) {
       return
     }
 
@@ -288,12 +273,12 @@ function WorkspaceContent({ routeCanvasPath }: { routeCanvasPath: string }) {
     restoreSelectionForCanvas(activeCanvasId)
   }, [
     activeCanvasId,
-    hasInitiallySynced,
     pendingCanvasAction,
     requestCanvasFit,
     restoreSelectionForCanvas,
     setSelectedNodeIdsIfChanged,
     store.root,
+    workspaceHasOpened,
     workspaceId,
   ])
 
@@ -501,29 +486,15 @@ function WorkspaceContent({ routeCanvasPath }: { routeCanvasPath: string }) {
     setFocusedNodeId(null)
   }, [])
 
-  useEffect(() => {
-    if (!isReconnecting) {
-      setShowReconnectIndicator(false)
-      return
-    }
-
-    const reconnectTimer = window.setTimeout(() => {
-      setShowReconnectIndicator(true)
-    }, RECONNECTING_INDICATOR_DELAY_MS)
-
-    return () => window.clearTimeout(reconnectTimer)
-  }, [isReconnecting])
-
   // Wait for initial sync to complete before rendering workspace
   // This prevents any code from writing to proxy before Yjs data arrives
-  // Note: hasInitiallySynced only goes true once, never resets on reconnection
-  if (!hasInitiallySynced) {
-    if (initialSyncError) {
+  if (sessionState === 'opening') {
+    if (sessionError) {
       return (
         <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
           <div className="max-w-md space-y-2">
             <h1 className="text-lg font-semibold text-foreground">Workspace failed to load</h1>
-            <p className="text-sm text-foreground-muted">{initialSyncError}</p>
+            <p className="text-sm text-foreground-muted">{sessionError}</p>
           </div>
           <button
             type="button"
@@ -545,129 +516,140 @@ function WorkspaceContent({ routeCanvasPath }: { routeCanvasPath: string }) {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {!isConnected && !isReconnecting && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-100 flex items-center gap-3 rounded-md bg-red-100 px-4 py-2 text-sm text-red-800 shadow-md dark:bg-red-950 dark:text-red-200">
-          <div className="flex flex-col">
-            <span>Disconnected. Changes won't sync until the workspace reconnects.</span>
-            {disconnectDetail ? <span className="text-xs opacity-80">{disconnectDetail}</span> : null}
+      {sessionState === 'interrupted' && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="workspace-session-interrupted-title"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/35 px-6 backdrop-blur-sm"
+        >
+          <div className="max-w-md space-y-4 rounded-2xl border border-border bg-canvas p-6 text-center shadow-xl">
+            <div className="space-y-2">
+              <h1 id="workspace-session-interrupted-title" className="text-lg font-semibold text-foreground">
+                Workspace session interrupted
+              </h1>
+              <p className="text-sm text-foreground-muted">
+                {sessionError ?? 'Local workspace session was interrupted. Reload Workspace to continue safely.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="canvas-btn rounded-full px-4 py-2 text-sm font-medium"
+            >
+              Reload Workspace
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="rounded-full border border-current px-3 py-1 text-xs font-medium"
-          >
-            Reload
-          </button>
         </div>
       )}
 
-      {/* Reconnecting indicator - non-blocking */}
-      {showReconnectIndicator && isReconnecting && !isConnected && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-100 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-4 py-2 rounded-md text-sm shadow-md">
-          Reconnecting...
-        </div>
-      )}
-      <WorkspaceInterlinksProvider value={interlinkSuggestions}>
-        <ReactFlowProvider>
-          <ProjectStateProvider>
-            <KanwasEditorManager />
-            <SearchHighlighter pendingHighlight={pendingHighlight} onComplete={() => setPendingHighlight(null)} />
-            <NodesSelectionProvider>
-              <WorkspaceSidebar
-                root={sidebarRoot}
-                activeCanvasId={activeCanvasId}
-                onCanvasSelect={handleCanvasSelect}
-                onNodeSelect={handleNodeSelect}
-                onNodeFocus={handleNodeFocus}
-                selectedNodeIds={selectedNodeIds}
-              />
+      <div
+        inert={sessionState === 'interrupted' ? true : undefined}
+        aria-hidden={sessionState === 'interrupted' ? true : undefined}
+        style={{ width: '100%', height: '100%' }}
+      >
+        <WorkspaceInterlinksProvider value={interlinkSuggestions}>
+          <ReactFlowProvider>
+            <ProjectStateProvider>
+              <KanwasEditorManager />
+              <SearchHighlighter pendingHighlight={pendingHighlight} onComplete={() => setPendingHighlight(null)} />
+              <NodesSelectionProvider>
+                <WorkspaceSidebar
+                  root={sidebarRoot}
+                  activeCanvasId={activeCanvasId}
+                  onCanvasSelect={handleCanvasSelect}
+                  onNodeSelect={handleNodeSelect}
+                  onNodeFocus={handleNodeFocus}
+                  selectedNodeIds={selectedNodeIds}
+                />
 
-              <div style={{ display: 'flex', width: '100%', height: '100%' }}>
-                {terminalOpen && !zenMode && !fullScreenMode && <TerminalPanel workspaceId={workspaceId} />}
-                <div className="flex-1 relative z-0 isolate bg-canvas overflow-hidden">
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      opacity: canvasOpacity,
-                      transition: 'opacity 100ms ease-out',
-                    }}
-                  >
-                    <div className="absolute bottom-[18px] left-4 z-50 flex items-center">
-                      <TerminalToggleButton />
-                    </div>
-
+                <div style={{ display: 'flex', width: '100%', height: '100%' }}>
+                  {terminalOpen && !zenMode && !fullScreenMode && <TerminalPanel workspaceId={workspaceId} />}
+                  <div className="flex-1 relative z-0 isolate bg-canvas overflow-hidden">
                     <div
-                      className="absolute top-4 z-50 flex gap-0 items-center"
+                      className="absolute inset-0"
                       style={{
-                        right: 'calc(var(--sidebar-width, 0px) + 16px)',
+                        opacity: canvasOpacity,
+                        transition: 'opacity 100ms ease-out',
                       }}
                     >
-                      <HelpButton />
-                      <ZoomResetButton />
-                      <ThemeToggle />
-                      {(!sidebarOpen || zenMode || fullScreenMode) && (
-                        <button
-                          onClick={() => {
-                            if (fullScreenMode) disableFullScreenMode()
-                            if (!sidebarOpen) toggleSidebar()
-                          }}
-                          className="canvas-btn w-10 h-10 flex items-center justify-center rounded-full transition-all duration-200
+                      <div className="absolute bottom-[18px] left-4 z-50 flex items-center">
+                        <TerminalToggleButton />
+                      </div>
+
+                      <div
+                        className="absolute top-4 z-50 flex gap-0 items-center"
+                        style={{
+                          right: 'calc(var(--sidebar-width, 0px) + 16px)',
+                        }}
+                      >
+                        <HelpButton />
+                        <ZoomResetButton />
+                        <ThemeToggle />
+                        {(!sidebarOpen || zenMode || fullScreenMode) && (
+                          <button
+                            onClick={() => {
+                              if (fullScreenMode) disableFullScreenMode()
+                              if (!sidebarOpen) toggleSidebar()
+                            }}
+                            className="canvas-btn w-10 h-10 flex items-center justify-center rounded-full transition-all duration-200
                                        hover:scale-110 active:scale-95 cursor-pointer"
-                          aria-label="Open sidebar"
-                        >
-                          <i className="fa-solid fa-table-columns text-sm text-foreground" />
-                        </button>
+                            aria-label="Open sidebar"
+                          >
+                            <i className="fa-solid fa-table-columns text-sm text-foreground" />
+                          </button>
+                        )}
+                      </div>
+
+                      {mutableCanvas ? (
+                        <CanvasFlow
+                          key={activeCanvasId!}
+                          mutableCanvas={mutableCanvas}
+                          selectedNodeIds={selectedNodeIds}
+                          selectedNodeId={selectedNodeId}
+                          focusedNodeId={focusedNodeId}
+                          fitSelectedNode={fitSelectedNode}
+                          fitCanvasRequestKey={activeCanvasFitRequestKey}
+                          onNodeFocused={handleNodeFocused}
+                          onSelectionChange={handleSelectionChange}
+                          onCanvasSelect={handleCanvasSelect}
+                          onWorkspaceLinkNavigate={handleWorkspaceLinkNavigate}
+                          onFitCanvasRequestHandled={handleFitCanvasRequestHandled}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full bg-canvas">
+                          <div className="text-center text-gray-500">
+                            <p className="text-lg">No canvas selected</p>
+                            <p className="text-sm">Select a canvas from the sidebar</p>
+                          </div>
+                        </div>
                       )}
                     </div>
-
-                    {mutableCanvas ? (
-                      <CanvasFlow
-                        key={activeCanvasId!}
-                        mutableCanvas={mutableCanvas}
-                        selectedNodeIds={selectedNodeIds}
-                        selectedNodeId={selectedNodeId}
-                        focusedNodeId={focusedNodeId}
-                        fitSelectedNode={fitSelectedNode}
-                        fitCanvasRequestKey={activeCanvasFitRequestKey}
-                        onNodeFocused={handleNodeFocused}
-                        onSelectionChange={handleSelectionChange}
-                        onCanvasSelect={handleCanvasSelect}
-                        onWorkspaceLinkNavigate={handleWorkspaceLinkNavigate}
-                        onFitCanvasRequestHandled={handleFitCanvasRequestHandled}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full bg-canvas">
-                        <div className="text-center text-gray-500">
-                          <p className="text-lg">No canvas selected</p>
-                          <p className="text-sm">Select a canvas from the sidebar</p>
-                        </div>
-                      </div>
-                    )}
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 z-[60] bg-canvas"
+                      style={initialFitOverlayStyle}
+                    />
                   </div>
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-0 z-[60] bg-canvas"
-                    style={initialFitOverlayStyle}
-                  />
                 </div>
-              </div>
-            </NodesSelectionProvider>
-          </ProjectStateProvider>
-        </ReactFlowProvider>
-      </WorkspaceInterlinksProvider>
+              </NodesSelectionProvider>
+            </ProjectStateProvider>
+          </ReactFlowProvider>
+        </WorkspaceInterlinksProvider>
 
-      {/* Search modal */}
-      <SearchModal
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        root={sidebarRoot}
-        yDoc={yDoc}
-        contentStore={contentStore}
-        onSelect={handleSearchSelect}
-        activeCanvasId={activeCanvasId}
-      />
+        {/* Search modal */}
+        <SearchModal
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+          root={sidebarRoot}
+          yDoc={yDoc}
+          contentStore={contentStore}
+          onSelect={handleSearchSelect}
+          activeCanvasId={activeCanvasId}
+        />
 
-      {CAN_SHOW_CARD_STYLE_EDITOR && <CardStyleEditor />}
+        {CAN_SHOW_CARD_STYLE_EDITOR && <CardStyleEditor />}
+      </div>
     </div>
   )
 }

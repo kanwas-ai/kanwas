@@ -5,7 +5,6 @@ import { useWorkspace } from '@/providers/workspace'
 import { type BlockNoteCollaborationProvider } from '@/lib/blocknote-collaboration'
 import { useTheme } from '@/providers/theme'
 import { useBlockNoteAuditEffects } from '@/hooks/useBlockNoteAuditEffects'
-import { useBlockNoteCollaborationUserInfo } from '@/hooks/useBlockNoteCollaborationUserInfo'
 import { useNoteBlockNoteBinding } from '@/hooks/useNoteBlockNoteBinding'
 import { useNoteFileAutosave } from '@/hooks/useNoteFileAutosave'
 import { blockNoteSchema } from '@/lib/blocknote-schema'
@@ -77,7 +76,6 @@ function FocusBlockNoteEditor({
     },
   })
 
-  useBlockNoteCollaborationUserInfo(editor, localUser)
   useBlockNoteAuditEffects({ editor, nodeId, isKanwasProtected })
   useNoteFileAutosave({ editor, nodeId, fragment })
 
@@ -96,9 +94,7 @@ export const FocusModeOverlay = memo(function FocusModeOverlay({
   skipEnterAnimation = false,
 }: FocusModeOverlayProps) {
   const { store } = useWorkspace()
-  const { fragment, editorKey, collaborationProvider, undoManager } = useNoteBlockNoteBinding(nodeId, {
-    awarenessEnabled: true,
-  })
+  const { fragment, editorKey, collaborationProvider, undoManager } = useNoteBlockNoteBinding(nodeId)
   const { isExiting } = useFocusMode()
   const layout = useFocusModeLayout()
   const [animationState, setAnimationState] = useState<'entering' | 'visible' | 'exiting'>(
