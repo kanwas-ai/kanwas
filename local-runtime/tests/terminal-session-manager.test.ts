@@ -11,6 +11,7 @@ import { TerminalSessionManager } from '../src/terminal/session-manager.js'
 
 const logger = createLogger({ level: 'silent' })
 const WORKSPACE_ID = 'test-workspace'
+const MCP_URL = 'http://127.0.0.1:4300/mcp'
 
 /** Poll `check()` until it's true, or fail after `timeoutMs`. */
 function waitFor(check: () => boolean, timeoutMs = 5000): Promise<void> {
@@ -122,7 +123,7 @@ describe('TerminalSessionManager', () => {
     process.env.SHELL = '/bin/sh' // deterministic shell for the 'shell' agent, no rc-file noise
     delete process.env.COLORFGBG // some terminal emulators (e.g. Terminal.app) set this ambiently; tests need a clean slate
     workspaceFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'kanwas-runtime-terminal-'))
-    manager = new TerminalSessionManager({ logger })
+    manager = new TerminalSessionManager({ logger, mcpUrl: MCP_URL })
     harness = await startHarness(manager)
   })
 

@@ -13,7 +13,7 @@ export default memo(function TerminalToggleButton() {
         aria-label={terminalOpen ? 'Hide terminal' : 'Show terminal'}
         title="Terminal (Ctrl+`)"
       >
-        <i className="fa-regular fa-terminal text-[15px] text-foreground" />
+        <i className="fa-solid fa-terminal text-[15px] text-foreground" />
       </button>
     </div>
   )

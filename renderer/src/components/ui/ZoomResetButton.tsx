@@ -11,7 +11,7 @@ export default memo(function ZoomResetButton() {
                  hover:scale-110 active:scale-95 cursor-pointer text-foreground/50 hover:text-foreground"
       aria-label="Reset zoom to 100%"
     >
-      <i className="fa-regular fa-magnifying-glass text-[14px] transition-colors"></i>
+      <i className="fa-solid fa-magnifying-glass text-[14px] transition-colors"></i>
     </button>
   )
 })

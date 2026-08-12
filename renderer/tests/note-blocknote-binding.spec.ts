@@ -1,7 +1,6 @@
 import { act, createElement, useEffect } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Awareness } from 'y-protocols/awareness'
+import { afterEach, describe, expect, it } from 'vitest'
 import { createYjsProxy } from 'valtio-y'
 import * as Y from 'yjs'
 
@@ -9,12 +8,11 @@ import type { CanvasItem, NodeItem, WorkspaceDocument } from 'shared'
 import { createWorkspaceContentStore } from 'shared/workspace-content-store'
 import { useNoteBlockNoteBinding } from '@/hooks/useNoteBlockNoteBinding'
 import { WorkspaceContext, type WorkspaceContextValue } from '@/providers/workspace/WorkspaceContext'
-import { createNoteDoc, deleteNoteDoc } from '@/lib/workspaceNoteDoc'
+import { createNoteDoc } from '@/lib/workspaceNoteDoc'
 import { WorkspaceUndoController } from '@/lib/workspaceUndo'
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 interface BindingSnapshot {
-  awareness: Awareness
   editorKey: string
   fragment: Y.XmlFragment | null
   fragmentKey: string
@@ -83,7 +81,6 @@ function BindingHarness({ noteId, onReady }: { noteId: string; onReady: (snapsho
 
   useEffect(() => {
     onReady({
-      awareness: binding.collaborationProvider.awareness,
       editorKey: binding.editorKey,
       fragment: binding.fragment,
       fragmentKey: binding.fragmentKey,
@@ -147,7 +144,7 @@ async function renderBinding(
 }
 
 describe('note blocknote binding', () => {
-  it('uses an isolated local awareness adapter with the shared note fragment and undo manager', async () => {
+  it('uses the shared note fragment and undo manager without a collaboration provider', async () => {
     const noteId = 'kanwas-node'
     const workspace = createWorkspaceHarness(noteId)
     pendingCleanups.push(workspace.cleanup)
@@ -155,13 +152,11 @@ describe('note blocknote binding', () => {
     const snapshot = await renderBinding(workspace.contextValue, noteId)
 
     expect(snapshot.fragment).toBe(workspace.contextValue.contentStore.getBlockNoteFragment(noteId))
-    expect(snapshot.awareness).toBeInstanceOf(Awareness)
-    expect(snapshot.awareness.doc).not.toBe(workspace.contextValue.yDoc)
     expect(snapshot.undoManager).toBe(workspace.contextValue.sharedEditorUndoManager)
     expect(snapshot.editorKey).toBe(snapshot.fragmentKey)
   })
 
-  it('keeps the isolated adapter and editor key stable across rerenders', async () => {
+  it('keeps the editor key and fragment stable across rerenders', async () => {
     const noteId = 'kanwas-node'
     const workspace = createWorkspaceHarness(noteId)
     pendingCleanups.push(workspace.cleanup)
@@ -169,30 +164,7 @@ describe('note blocknote binding', () => {
     const first = await renderBinding(workspace.contextValue, noteId)
     const second = await renderBinding(workspace.contextValue, noteId)
 
-    expect(second.awareness).toBe(first.awareness)
     expect(second.editorKey).toBe(first.editorKey)
     expect(second.fragment).toBe(first.fragment)
-  })
-
-  it('destroys the isolated adapter on unmount and never replaces it when a note is deleted', async () => {
-    const noteId = 'kanwas-node'
-    const workspace = createWorkspaceHarness(noteId)
-    pendingCleanups.push(workspace.cleanup)
-    let latestSnapshot: BindingSnapshot | null = null
-
-    const first = await renderBinding(workspace.contextValue, noteId, (snapshot) => {
-      latestSnapshot = snapshot
-    })
-    const destroy = vi.spyOn(first.awareness, 'destroy')
-
-    await act(async () => {
-      deleteNoteDoc(workspace.contextValue.yDoc, noteId)
-    })
-
-    expect(latestSnapshot?.awareness).toBe(first.awareness)
-
-    act(() => mountedRoot?.unmount())
-    mountedRoot = null
-    expect(destroy).toHaveBeenCalled()
   })
 })

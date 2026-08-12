@@ -13,7 +13,6 @@ import { useNodeData, useFontChangeAll } from './useNodeData'
 import { useNoteBlockNoteBinding } from '@/hooks/useNoteBlockNoteBinding'
 import { useNoteFileAutosave } from '@/hooks/useNoteFileAutosave'
 import { computeMaxStickyFont, useStickyTextAutoFit } from '@/hooks/useStickyTextAutoFit'
-import { type BlockNoteCollaborationProvider } from '@/lib/blocknote-collaboration'
 import { useSetEditor, useRemoveEditor } from '@/providers/project-state'
 import { useWorkspace } from '@/providers/workspace'
 import { blockNoteSchema } from '@/lib/blocknote-schema'
@@ -56,7 +55,6 @@ const STICKY_COLORS: Record<string, { from: string; to: string; text: string }> 
 function StickyNoteEditorInner({
   nodeId,
   fragment,
-  provider,
   undoManager,
   fontFamily,
   nodeWidth,
@@ -64,7 +62,6 @@ function StickyNoteEditorInner({
 }: {
   nodeId: string
   fragment: Y.XmlFragment
-  provider: BlockNoteCollaborationProvider
   undoManager: Y.UndoManager
   fontFamily: NodeFontFamily
   nodeWidth: number
@@ -78,7 +75,6 @@ function StickyNoteEditorInner({
   const editor = useCreateBlockNote({
     schema: blockNoteSchema,
     collaboration: {
-      provider,
       fragment,
       user: {
         name: localUser.name,
@@ -146,7 +142,7 @@ function StickyNoteEditor({
   nodeWidth: number
   nodeHeight: number
 }) {
-  const { fragment, editorKey, collaborationProvider, undoManager } = useNoteBlockNoteBinding(nodeId)
+  const { fragment, editorKey, undoManager } = useNoteBlockNoteBinding(nodeId)
 
   if (!fragment) return null
 
@@ -156,7 +152,6 @@ function StickyNoteEditor({
         key={editorKey}
         nodeId={nodeId}
         fragment={fragment}
-        provider={collaborationProvider}
         undoManager={undoManager}
         fontFamily={fontFamily}
         nodeWidth={nodeWidth}

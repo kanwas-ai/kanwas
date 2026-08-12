@@ -13,12 +13,10 @@ import { findCanonicalKanwasNode } from '@/lib/workspaceUtils'
 function MountedKanwasEditor({
   editorNodeId,
   fragment,
-  collaborationProvider,
   undoManager,
 }: {
   editorNodeId: string
   fragment: Y.XmlFragment
-  collaborationProvider: ReturnType<typeof useNoteBlockNoteBinding>['collaborationProvider']
   undoManager: Y.UndoManager
 }) {
   const setMountedKanwasEditor = useSetMountedKanwasEditor()
@@ -28,7 +26,6 @@ function MountedKanwasEditor({
   const editor = useCreateBlockNote({
     schema: blockNoteSchema,
     collaboration: {
-      provider: collaborationProvider,
       fragment,
       user: {
         name: localUser.name,
@@ -54,20 +51,14 @@ function MountedKanwasEditor({
 }
 
 function MountedKanwasEditorWithFragment({ editorNodeId }: { editorNodeId: string }) {
-  const { fragment, editorKey, collaborationProvider, undoManager } = useNoteBlockNoteBinding(editorNodeId)
+  const { fragment, editorKey, undoManager } = useNoteBlockNoteBinding(editorNodeId)
 
   if (!fragment) {
     return null
   }
 
   return (
-    <MountedKanwasEditor
-      key={editorKey}
-      editorNodeId={editorNodeId}
-      fragment={fragment}
-      collaborationProvider={collaborationProvider}
-      undoManager={undoManager}
-    />
+    <MountedKanwasEditor key={editorKey} editorNodeId={editorNodeId} fragment={fragment} undoManager={undoManager} />
   )
 }
 

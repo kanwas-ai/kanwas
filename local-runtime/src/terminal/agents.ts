@@ -27,6 +27,11 @@ export interface AgentSpawnSpec {
   args: string[]
 }
 
+export interface AgentLaunchOptions {
+  /** Session-local Kanwas MCP endpoint. Injected without changing user configuration. */
+  mcpUrl?: string
+}
+
 function pathDelimiter(platform: NodeJS.Platform): string {
   return platform === 'win32' ? ';' : ':'
 }
@@ -100,11 +105,37 @@ function shellSpec(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): AgentSpaw
 export function agentSpawnSpec(
   agent: AgentId,
   env: NodeJS.ProcessEnv = process.env,
-  platform: NodeJS.Platform = process.platform
+  platform: NodeJS.Platform = process.platform,
+  options: AgentLaunchOptions = {}
 ): AgentSpawnSpec {
   if (agent === 'shell') return shellSpec(env, platform)
+  const args = agentMcpArgs(agent, options.mcpUrl)
   const resolved = resolveCommand(agent, env, platform)
-  return resolved ? wrapWindowsScript(resolved, [], env, platform) : { command: agent, args: [] }
+  return resolved ? wrapWindowsScript(resolved, args, env, platform) : { command: agent, args }
+}
+
+/**
+ * Add the embedded Kanwas MCP server to only this CLI invocation. Both agents
+ * merge these values with their normal user/project configuration:
+ *
+ * - Codex accepts a command-line config override in its native TOML shape.
+ * - Claude Code accepts an inline JSON MCP configuration.
+ *
+ * Keeping this ephemeral avoids writing into ~/.codex, ~/.claude, or the vault.
+ */
+function agentMcpArgs(agent: Exclude<AgentId, 'shell'>, mcpUrl?: string): string[] {
+  if (!mcpUrl) return []
+  if (agent === 'codex') {
+    return ['-c', `mcp_servers.kanwas.url=${JSON.stringify(mcpUrl)}`]
+  }
+  return [
+    '--mcp-config',
+    JSON.stringify({
+      mcpServers: {
+        kanwas: { type: 'http', url: mcpUrl },
+      },
+    }),
+  ]
 }
 
 let macEnvironmentTask: Promise<void> | undefined

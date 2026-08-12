@@ -47,6 +47,11 @@ function jsonText(value: unknown): { content: [{ type: 'text'; text: string }] }
   return { content: [{ type: 'text', text: JSON.stringify(value, null, 2) }] }
 }
 
+export const KANWAS_MCP_INSTRUCTIONS =
+  'Kanwas vault content is edited through ordinary files, not MCP. Use kanwas_get_ui_context when the user refers ' +
+  'to the current canvas, selection, open document, or selected text. Use kanwas_workspace_info to resolve mounted ' +
+  'vaults. These tools are read-only; make requested changes in the reported workspace folder.'
+
 /**
  * Fresh McpServer with both tools registered — see the module doc for why
  * this is built per-request in `createMcpHandler`. Exported directly for
@@ -54,7 +59,7 @@ function jsonText(value: unknown): { content: [{ type: 'text'; text: string }] }
  */
 export function createKanwasMcpServer(options: McpHandlerOptions): McpServer {
   const { mountManager, uiContextStore } = options
-  const server = new McpServer({ name: 'kanwas', version: '1.0.0' })
+  const server = new McpServer({ name: 'kanwas', version: '1.0.0' }, { instructions: KANWAS_MCP_INSTRUCTIONS })
 
   server.registerTool(
     'kanwas_workspace_info',

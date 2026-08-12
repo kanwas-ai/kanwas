@@ -105,7 +105,7 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
               }}
             />
             <MenuItem
-              icon="fa-regular fa-font"
+              icon="fa-solid fa-font"
               label="Add text"
               onClick={() => {
                 onAddTextNode()
@@ -148,7 +148,7 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
           <>
             {canGroupSelection && (
               <MenuItem
-                icon="fa-regular fa-layer-group"
+                icon="fa-solid fa-layer-group"
                 label="Group"
                 shortcut={`${isMacPlatform() ? '⌘' : 'Ctrl+'} G`}
                 onClick={() => {

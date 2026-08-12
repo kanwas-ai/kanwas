@@ -40,7 +40,7 @@ export const GroupContextMenu = memo(function GroupContextMenu({ position, onGro
             onClose()
           }}
         >
-          <i className="fa-regular fa-layer-group text-[12px] w-4 text-center" />
+          <i className="fa-solid fa-layer-group text-[12px] w-4 text-center" />
           <span className="flex-1 text-left">Group</span>
           <span className="text-xs text-foreground-muted/40">⌘ G</span>
         </button>

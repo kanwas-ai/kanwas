@@ -9,7 +9,12 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { createLogger } from '../src/logger.js'
-import { createKanwasMcpServer, type McpMount, type MountSource } from '../src/terminal/mcp-server.js'
+import {
+  createKanwasMcpServer,
+  KANWAS_MCP_INSTRUCTIONS,
+  type McpMount,
+  type MountSource,
+} from '../src/terminal/mcp-server.js'
 import { UiContextStore } from '../src/terminal/ui-context.js'
 
 const logger = createLogger({ level: 'silent' })
@@ -57,6 +62,7 @@ describe('kanwas_workspace_info', () => {
     })
     const client = await connectedClient(server)
 
+    expect(client.getInstructions()).toBe(KANWAS_MCP_INSTRUCTIONS)
     const result = await client.callTool({ name: 'kanwas_workspace_info', arguments: {} })
     expect(textOf(result)).toEqual({ workspaces: [{ id: 'ws-1', folder: '/vaults/one', name: 'one' }] })
   })

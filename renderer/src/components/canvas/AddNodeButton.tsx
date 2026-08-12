@@ -94,7 +94,7 @@ export const AddNodeButton = memo(function AddNodeButton({
                     className={`canvas-tool-btn${isArmed ? ' canvas-tool-btn-armed' : ''}`}
                     aria-pressed={isArmed}
                   >
-                    <i className={`fa-regular ${tool.icon} text-[15px] text-foreground`} />
+                    <i className={`fa-${tool.iconStyle} ${tool.icon} text-[15px] text-foreground`} />
                   </button>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
@@ -120,7 +120,7 @@ export const AddNodeButton = memo(function AddNodeButton({
                 aria-label="More tools"
               >
                 <i
-                  className={`fa-regular fa-plus text-[15px] text-foreground transition-transform duration-150 ${isMoreOpen ? 'rotate-45' : ''}`}
+                  className={`fa-solid fa-plus text-[15px] text-foreground transition-transform duration-150 ${isMoreOpen ? 'rotate-45' : ''}`}
                 />
               </button>
             </Tooltip.Trigger>
@@ -153,7 +153,7 @@ export const AddNodeButton = memo(function AddNodeButton({
                         className={`canvas-tool-btn${isArmed ? ' canvas-tool-btn-armed' : ''}`}
                         aria-pressed={isArmed}
                       >
-                        <i className={`fa-regular ${tool.icon} text-[15px] text-foreground`} />
+                        <i className={`fa-${tool.iconStyle} ${tool.icon} text-[15px] text-foreground`} />
                       </button>
                     </Tooltip.Trigger>
                     <Tooltip.Portal>

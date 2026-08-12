@@ -3,7 +3,6 @@ import { createRoot, type Root } from 'react-dom/client'
 import { BlockNoteEditor } from '@blocknote/core'
 import { TextSelection } from '@tiptap/pm/state'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Awareness } from 'y-protocols/awareness'
 import { VALTIO_Y_ORIGIN, createYjsProxy } from 'valtio-y'
 import * as Y from 'yjs'
 
@@ -255,13 +254,11 @@ async function mountAuditEffectsHarness(
 }
 
 async function seedNoteText(noteDoc: Y.Doc, text: string): Promise<void> {
-  const awareness = new Awareness(noteDoc)
   const editor = BlockNoteEditor.create({
     schema: blockNoteSchema,
     trailingBlock: false,
     collaboration: {
       fragment: noteDoc.getXmlFragment('content'),
-      provider: { awareness },
       user: {
         name: 'Seeder',
         color: '#111111',
@@ -276,7 +273,6 @@ async function seedNoteText(noteDoc: Y.Doc, text: string): Promise<void> {
   await flushAsyncWork()
 
   editor._tiptapEditor.destroy()
-  awareness.destroy()
   mountElement.remove()
 }
 
@@ -307,13 +303,11 @@ async function createCollaborativeEditor(
   editor: TestEditor
   cleanup: () => void
 }> {
-  const awareness = new Awareness(workspace.noteDoc)
   const editor = BlockNoteEditor.create({
     schema: blockNoteSchema,
     trailingBlock: false,
     collaboration: {
       fragment: workspace.noteDoc.getXmlFragment('content'),
-      provider: { awareness },
       user: {
         name: 'Local User',
         color: '#111111',
@@ -332,7 +326,6 @@ async function createCollaborativeEditor(
     editor,
     cleanup: () => {
       editor._tiptapEditor.destroy()
-      awareness.destroy()
       mountElement.remove()
     },
   }
@@ -389,6 +382,20 @@ afterEach(() => {
 })
 
 describe('BlockNote workspace undo grouping', () => {
+  it('omits the collaboration cursor plugin while retaining the Yjs document binding', async () => {
+    const session = await createSession('local document text')
+
+    try {
+      const plugins = session.editor._tiptapEditor.state.plugins
+
+      expect(plugins.some((plugin) => plugin.key.includes('yjs-cursor'))).toBe(false)
+      expect(plugins.some((plugin) => plugin.key.includes('y-sync'))).toBe(true)
+      expect(document.querySelector('.bn-collaboration-cursor__base')).toBeNull()
+    } finally {
+      session.cleanup()
+    }
+  })
+
   it('does not treat text selection as its own undo step before a selected-text delete', async () => {
     const session = await createSession('before delete after')
 

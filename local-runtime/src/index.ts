@@ -100,7 +100,7 @@ export async function startLocalRuntime(options: LocalRuntimeOptions): Promise<L
     templatesDir: options.templatesDir,
     logger,
   })
-  const terminalManager = new TerminalSessionManager({ logger })
+  const terminalManager = new TerminalSessionManager({ logger, mcpUrl: `${origin}/mcp` })
   const vaultService = new VaultService({
     registryFile,
     legacyRegistryFile,

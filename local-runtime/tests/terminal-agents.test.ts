@@ -61,6 +61,46 @@ describe('terminal agents', () => {
     expect(quoteForCmd('a path\\with "quotes"')).toBe('"a path\\with ""quotes"""')
   })
 
+  it.skipIf(process.platform === 'win32')(
+    'injects the Kanwas MCP endpoint into Codex without persisting config',
+    () => {
+      const { dir, file } = fakeBin('codex')
+      fs.chmodSync(file, 0o700)
+      const mcpUrl = 'http://127.0.0.1:4300/mcp'
+
+      expect(agentSpawnSpec('codex', { PATH: dir }, 'linux', { mcpUrl })).toEqual({
+        command: file,
+        args: ['-c', `mcp_servers.kanwas.url=${JSON.stringify(mcpUrl)}`],
+      })
+    }
+  )
+
+  it.skipIf(process.platform === 'win32')(
+    'injects the Kanwas MCP endpoint into Claude Code without replacing other config',
+    () => {
+      const { dir, file } = fakeBin('claude')
+      fs.chmodSync(file, 0o700)
+      const mcpUrl = 'http://127.0.0.1:4300/mcp'
+
+      expect(agentSpawnSpec('claude', { PATH: dir }, 'linux', { mcpUrl })).toEqual({
+        command: file,
+        args: ['--mcp-config', JSON.stringify({ mcpServers: { kanwas: { type: 'http', url: mcpUrl } } })],
+      })
+    }
+  )
+
+  it('preserves injected MCP arguments when launching a Windows command shim', () => {
+    const { dir, file } = fakeBin('codex.cmd')
+    const env = { PATH: dir, PATHEXT: '.CMD', ComSpec: 'C:\\Windows\\System32\\cmd.exe' }
+    const mcpUrl = 'http://127.0.0.1:4300/mcp'
+    const configOverride = `mcp_servers.kanwas.url=${JSON.stringify(mcpUrl)}`
+
+    expect(agentSpawnSpec('codex', env, 'win32', { mcpUrl })).toEqual({
+      command: env.ComSpec,
+      args: ['/d', '/s', '/c', [quoteForCmd(file), quoteForCmd('-c'), quoteForCmd(configOverride)].join(' ')],
+    })
+  })
+
   it('prefers PowerShell for the Windows shell and falls back to ComSpec', () => {
     const { dir, file } = fakeBin('pwsh.exe')
     expect(agentSpawnSpec('shell', { PATH: dir, PATHEXT: '.EXE' }, 'win32')).toEqual({

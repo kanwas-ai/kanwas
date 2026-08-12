@@ -26,6 +26,14 @@ within about a second — no save step, no import.
 A new `.md` file becomes a node automatically; a new folder becomes a canvas.
 You never have to register anything.
 
+When this agent is launched from the Kanwas terminal, a read-only `kanwas` MCP
+server is connected automatically. Use `kanwas_get_ui_context` when the user
+refers to the current canvas, selected nodes, open document, or selected text;
+it resolves that UI state to file paths and line ranges. Use
+`kanwas_workspace_info` when you need to identify a mounted vault. Continue to
+make all content changes through ordinary files—the MCP tools do not edit the
+canvas.
+
 **Frontmatter is preserved, verbatim.** A leading `---` YAML block at the top of
 a `.md` file is kept byte-for-byte and hidden from the visual editor. Add, keep,
 or read frontmatter freely — editing the note in the UI will not touch it.

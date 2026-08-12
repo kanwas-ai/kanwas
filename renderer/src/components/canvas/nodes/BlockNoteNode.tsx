@@ -22,7 +22,6 @@ import { useBlockNoteTextSelectionSync } from '@/hooks/useBlockNoteTextSelection
 import { useNoteBlockNoteBinding } from '@/hooks/useNoteBlockNoteBinding'
 import { useNoteFileAutosave } from '@/hooks/useNoteFileAutosave'
 import { blockNoteSchema } from '@/lib/blocknote-schema'
-import { type BlockNoteCollaborationProvider } from '@/lib/blocknote-collaboration'
 import * as Y from 'yjs'
 import { createPasteHandler, handlePasteWithHardBreakDedupe } from '@/lib/paste-utils'
 import { PersistSelectionExtension } from '@/lib/persist-selection-extension'
@@ -59,7 +58,6 @@ type BlockNoteNodeProps = WithCanvasData<BlockNoteNode>
  */
 function BlockNoteEditor({
   fragment,
-  provider,
   theme,
   id,
   undoManager,
@@ -68,7 +66,6 @@ function BlockNoteEditor({
   isKanwasProtected,
 }: {
   fragment: Y.XmlFragment
-  provider: BlockNoteCollaborationProvider
   theme: ThemeMode
   id: string
   undoManager: Y.UndoManager
@@ -89,7 +86,6 @@ function BlockNoteEditor({
     trailingBlock: false,
     schema: blockNoteSchema,
     collaboration: {
-      provider,
       fragment,
       user: {
         name: localUser.name,
@@ -653,7 +649,7 @@ function BlockNoteNodeComponent({ selected, id, data }: BlockNoteNodeProps) {
   const { onCollapseNode, onFocusNode, onWorkspaceLinkNavigate } = data
   const isKanwasProtected = data.isKanwasProtected === true
   const { theme } = useTheme()
-  const { fragment, editorKey, collaborationProvider, undoManager } = useNoteBlockNoteBinding(id)
+  const { fragment, editorKey, undoManager } = useNoteBlockNoteBinding(id)
   const rootRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
 
@@ -733,7 +729,6 @@ function BlockNoteNodeComponent({ selected, id, data }: BlockNoteNodeProps) {
           <BlockNoteEditor
             key={editorKey}
             fragment={fragment}
-            provider={collaborationProvider}
             theme={theme.mode}
             id={id}
             undoManager={undoManager}

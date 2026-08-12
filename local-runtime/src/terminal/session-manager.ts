@@ -83,14 +83,18 @@ function toBuffer(data: RawData): Buffer {
 
 export interface TerminalSessionManagerOptions {
   logger: Logger
+  /** Streamable-HTTP MCP endpoint injected into Codex and Claude Code sessions. */
+  mcpUrl: string
 }
 
 export class TerminalSessionManager {
   private readonly logger: Logger
+  private readonly mcpUrl: string
   private readonly sessions = new Map<string, SessionRecord>()
 
   constructor(options: TerminalSessionManagerOptions) {
     this.logger = options.logger.child({ component: 'TerminalSessionManager' })
+    this.mcpUrl = options.mcpUrl
   }
 
   /** Spawn a new PTY session. cwd = the workspace folder; env carries TERM/COLORTERM/KANWAS_WORKSPACE_DIR. */
@@ -103,7 +107,7 @@ export class TerminalSessionManager {
         `Terminal dimensions must be integer columns ${TERMINAL_MIN_COLS}-${TERMINAL_MAX_COLS} and rows ${TERMINAL_MIN_ROWS}-${TERMINAL_MAX_ROWS}`
       )
     }
-    const spec = agentSpawnSpec(agent)
+    const spec = agentSpawnSpec(agent, process.env, process.platform, { mcpUrl: this.mcpUrl })
 
     const proc = spawn(spec.command, spec.args, {
       name: 'xterm-256color',

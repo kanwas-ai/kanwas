@@ -137,8 +137,11 @@ Windows uses `PATHEXT`, PowerShell or `%ComSpec%`, and ConPTY through
 `node-pty`.
 
 The renderer can push selected file/range context into a terminal. MCP-capable
-local agents can pull the same in-memory context from `/mcp`. The bundled
-`mcp.json.template` points local tools at the fixed loopback endpoint.
+local agents can pull the same in-memory context from `/mcp`. Kanwas injects
+that streamable-HTTP endpoint into every Codex and Claude Code process it
+launches, scoped to that process only; user-global and project MCP settings are
+preserved and no CLI configuration files are modified. The bundled
+`mcp.json.template` remains useful when launching Claude Code outside Kanwas.
 
 ## Vault template
 

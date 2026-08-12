@@ -2,7 +2,6 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { BlockNoteView } from '@blocknote/mantine'
 import { useCreateBlockNote } from '@blocknote/react'
 import { useWorkspace } from '@/providers/workspace'
-import { type BlockNoteCollaborationProvider } from '@/lib/blocknote-collaboration'
 import { useTheme } from '@/providers/theme'
 import { useBlockNoteAuditEffects } from '@/hooks/useBlockNoteAuditEffects'
 import { useNoteBlockNoteBinding } from '@/hooks/useNoteBlockNoteBinding'
@@ -30,13 +29,11 @@ interface FocusModeOverlayProps {
 function FocusBlockNoteEditor({
   nodeId,
   fragment,
-  provider,
   undoManager,
   isKanwasProtected,
 }: {
   nodeId: string
   fragment: Y.XmlFragment
-  provider: BlockNoteCollaborationProvider
   undoManager: Y.UndoManager
   isKanwasProtected: boolean
 }) {
@@ -46,7 +43,6 @@ function FocusBlockNoteEditor({
   const editor = useCreateBlockNote({
     schema: blockNoteSchema,
     collaboration: {
-      provider,
       fragment,
       user: {
         name: localUser.name,
@@ -94,7 +90,7 @@ export const FocusModeOverlay = memo(function FocusModeOverlay({
   skipEnterAnimation = false,
 }: FocusModeOverlayProps) {
   const { store } = useWorkspace()
-  const { fragment, editorKey, collaborationProvider, undoManager } = useNoteBlockNoteBinding(nodeId)
+  const { fragment, editorKey, undoManager } = useNoteBlockNoteBinding(nodeId)
   const { isExiting } = useFocusMode()
   const layout = useFocusModeLayout()
   const [animationState, setAnimationState] = useState<'entering' | 'visible' | 'exiting'>(
@@ -192,7 +188,6 @@ export const FocusModeOverlay = memo(function FocusModeOverlay({
               key={editorKey}
               nodeId={nodeId}
               fragment={fragment}
-              provider={collaborationProvider}
               undoManager={undoManager}
               isKanwasProtected={isKanwasProtected}
             />

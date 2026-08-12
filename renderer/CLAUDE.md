@@ -175,7 +175,7 @@ Two separate undo stacks managed by Yjs UndoManagers:
    - Shared across all editors for cross-editor undo
    - BlockNote's internal Cmd+Z uses this when focused in an editor
 
-**BlockNote patch:** `@blocknote/core@0.46.0` is patched (`patches/@blocknote__core@0.46.0.patch`) to accept an `undoManager` option for its Y.XmlFragment binding. This allows passing the shared `editorUndoManager` to all editors. BlockNote receives an isolated in-memory awareness-shaped adapter because its binding requires that interface; the adapter is never connected to Kanwas's document transport.
+**BlockNote patch:** `@blocknote/core@0.46.0` is patched (`patches/@blocknote__core@0.46.0.patch`) to accept an `undoManager` option for its Y.XmlFragment binding. This allows passing the shared `editorUndoManager` to all editors. The collaboration provider is intentionally omitted, so BlockNote installs document and undo bindings without its awareness/cursor plugin.
 
 **Behavior:**
 

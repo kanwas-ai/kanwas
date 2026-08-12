@@ -1,11 +1,12 @@
-// Seed a brand-new workspace with the AGENTS.md guide and the `.mcp.json`
-// MCP-server registration (WP-C: so a user's CLI agent can find
-// `kanwas_get_ui_context` / `kanwas_workspace_info` without manual setup).
+// Seed a brand-new workspace with the AGENTS.md guide and a `.mcp.json`
+// registration for Claude Code sessions launched outside Kanwas. Embedded
+// Codex and Claude Code terminals receive the same MCP endpoint directly in
+// their process arguments (see terminal/agents.ts).
 //
 // When the local runtime opens an EMPTY folder (a fresh workspace), drop the
-// packaged `templates/AGENTS.md` and `templates/.mcp.json` into it so a
-// user's CLI agent (Claude Code, Codex) finds instructions on how the folder
-// maps to the canvas, and can auto-register the runtime's MCP endpoint. This
+// packaged `templates/AGENTS.md` and `templates/.mcp.json` into it so coding
+// agents find instructions on how the folder maps to the canvas, and external
+// Claude Code sessions can auto-register the runtime's MCP endpoint. This
 // mirrors the existing empty-folder welcome-note behavior, but writes real,
 // persistent files (AGENTS.md then adopts as the workspace's first node)
 // instead of an ephemeral in-memory note.
