@@ -154,6 +154,7 @@ __pycache__/
 
 # Deployment artifacts
 deploy.tar
+desktop/release/
 
 # Claude Code local config
 .claude/

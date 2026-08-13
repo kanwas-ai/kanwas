@@ -1,0 +1,75 @@
+appId: ai.kanwas.desktop
+productName: Kanwas
+artifactName: '${productName}-${version}-${os}-${arch}.${ext}'
+
+directories:
+  buildResources: build
+  output: release
+
+asar: true
+asarUnpack:
+  - node_modules/node-pty/**/*
+
+files:
+  - dist/**/*
+  - '!dist/**/*.map'
+  - ui/**/*
+  - package.json
+
+extraResources:
+  - from: ../LICENSE
+    to: LICENSE
+  - from: ../renderer/dist
+    to: renderer
+    filter:
+      - '**/*'
+  - from: ../local-runtime/templates
+    to: templates
+    filter:
+      - '**/*'
+
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.productivity
+  icon: build/icon.icns
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  notarize: true
+  forceCodeSigning: false
+
+win:
+  target:
+    - nsis
+  icon: build/icon.png
+  forceCodeSigning: false
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+
+linux:
+  target:
+    - AppImage
+    - deb
+  icon: build/icon.png
+  executableName: kanwas
+  category: Office
+  synopsis: Local-first visual workspace
+  maintainer: Kanwas contributors <kanwas-ai@users.noreply.github.com>
+  vendor: Kanwas
+  desktop:
+    entry:
+      Name: Kanwas
+      Comment: Local-first visual workspace for notes, canvases, files, and AI tools
+      Categories: Office;Utility;
+      Keywords: notes;canvas;workspace;productivity;
+      StartupWMClass: Kanwas
+      Terminal: false
+
+publish: null

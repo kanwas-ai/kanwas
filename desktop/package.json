@@ -2,6 +2,17 @@
   "name": "@kanwas/desktop",
   "version": "0.1.0",
   "private": true,
+  "description": "Local-first visual workspace for notes, canvases, files, and AI tools",
+  "author": {
+    "name": "Kanwas contributors",
+    "email": "kanwas-ai@users.noreply.github.com"
+  },
+  "homepage": "https://kanwas.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kanwas-ai/kanwas.git"
+  },
+  "license": "Apache-2.0",
   "main": "dist/main.js",
   "scripts": {
     "bundle": "node build.mjs",
@@ -10,20 +21,27 @@
     "rebuild:native": "electron-rebuild -f -w node-pty --module-dir .",
     "dev": "pnpm prepare:app && pnpm rebuild:native && pnpm bundle && electron .",
     "build": "pnpm prepare:app && pnpm bundle",
+    "package": "pnpm build && electron-builder --publish never",
+    "package:dir": "pnpm build && electron-builder --dir --publish never",
+    "package:mac": "pnpm build && electron-builder --mac --publish never",
+    "package:win": "pnpm build && electron-builder --win --publish never",
+    "package:linux": "pnpm build && electron-builder --linux --publish never",
+    "smoke:package": "node scripts/smoke-packaged.mjs",
     "typecheck": "tsc --noEmit",
     "check": "pnpm typecheck && pnpm build"
   },
   "dependencies": {
-    "@kanwas/local-runtime": "workspace:*",
     "jsdom": "25.0.1",
-    "node-pty": "^1.1.0",
-    "shared": "workspace:*"
+    "node-pty": "^1.1.0"
   },
   "devDependencies": {
+    "@kanwas/local-runtime": "workspace:*",
     "@electron/rebuild": "^4.2.0",
     "@types/node": "^22.19.0",
     "electron": "^43.1.1",
+    "electron-builder": "26.15.7",
     "esbuild": "^0.25",
+    "shared": "workspace:*",
     "typescript": "^5.7.2"
   }
 }

@@ -1,0 +1,189 @@
+name: Release desktop application
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a release commit from master
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/master
+      - name: Match tag to desktop package version
+        run: node desktop/scripts/validate-release-tag.mjs "$GITHUB_REF_NAME"
+
+  build:
+    name: Build ${{ matrix.label }}
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macOS arm64
+            runner: macos-latest
+            target: mac
+            arch: arm64
+            artifact: release-macos-arm64
+            files: |
+              desktop/release/*.dmg
+              desktop/release/*.zip
+          - label: macOS x64
+            runner: macos-15-intel
+            target: mac
+            arch: x64
+            artifact: release-macos-x64
+            files: |
+              desktop/release/*.dmg
+              desktop/release/*.zip
+          - label: Windows x64
+            runner: windows-latest
+            target: win
+            arch: x64
+            artifact: release-windows-x64
+            files: desktop/release/*.exe
+          - label: Linux x64
+            runner: ubuntu-latest
+            target: linux
+            arch: x64
+            artifact: release-linux-x64
+            files: |
+              desktop/release/*.AppImage
+              desktop/release/*.deb
+    runs-on: ${{ matrix.runner }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.target == 'mac' && secrets.MAC_CSC_LINK != '' && 'true' || 'false' }}
+      CSC_LINK: ${{ matrix.target == 'mac' && secrets.MAC_CSC_LINK || matrix.target == 'win' && secrets.WIN_CSC_LINK || '' }}
+      CSC_KEY_PASSWORD: ${{ matrix.target == 'mac' && secrets.MAC_CSC_KEY_PASSWORD || matrix.target == 'win' && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+      APPLE_API_KEY_BASE64: ${{ matrix.target == 'mac' && secrets.APPLE_API_KEY_BASE64 || '' }}
+      APPLE_API_KEY_ID: ${{ matrix.target == 'mac' && secrets.APPLE_API_KEY_ID || '' }}
+      APPLE_API_ISSUER: ${{ matrix.target == 'mac' && secrets.APPLE_API_ISSUER || '' }}
+      APPLE_TEAM_ID: ${{ matrix.target == 'mac' && secrets.APPLE_TEAM_ID || '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install virtual display for Linux smoke test
+        if: matrix.target == 'linux'
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends --yes xvfb
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @kanwas/desktop... --filter @kanwas/renderer...
+      - name: Check and build application sources
+        run: pnpm --filter @kanwas/desktop check
+
+      - name: Prepare Apple notarization key
+        if: matrix.target == 'mac' && env.APPLE_API_KEY_BASE64 != ''
+        shell: bash
+        run: |
+          printf '%s' "$APPLE_API_KEY_BASE64" | openssl base64 -d -A -out "$RUNNER_TEMP/AuthKey.p8"
+          echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+
+      - name: Build installers
+        run: pnpm --filter @kanwas/desktop exec electron-builder --${{ matrix.target }} --${{ matrix.arch }} --publish never
+      - name: Smoke test packaged application
+        run: pnpm --filter @kanwas/desktop smoke:package
+
+      - name: Verify macOS code signature
+        if: matrix.target == 'mac' && env.CSC_LINK != ''
+        shell: bash
+        run: |
+          app_path="$(find desktop/release -type d -name Kanwas.app -print -quit)"
+          test -n "$app_path"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+      - name: Verify macOS notarization
+        if: matrix.target == 'mac' && env.APPLE_API_KEY_BASE64 != ''
+        shell: bash
+        run: |
+          app_path="$(find desktop/release -type d -name Kanwas.app -print -quit)"
+          test -n "$app_path"
+          xcrun stapler validate "$app_path"
+          spctl --assess --verbose --type exec "$app_path"
+      - name: Verify Windows code signatures
+        if: matrix.target == 'win' && env.CSC_LINK != ''
+        shell: pwsh
+        run: |
+          $main = Get-ChildItem desktop/release/win-unpacked -File -Filter Kanwas.exe
+          $installers = Get-ChildItem desktop/release -File -Filter *.exe
+          foreach ($file in @($main) + @($installers)) {
+            $signature = Get-AuthenticodeSignature $file.FullName
+            if ($signature.Status -ne 'Valid') {
+              throw "Invalid Authenticode signature on $($file.FullName): $($signature.Status)"
+            }
+          }
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+      - name: Generate SHA-256 checksums
+        shell: bash
+        run: |
+          cd release-assets
+          find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+      - name: Attest release assets
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: release-assets/*
+      - name: Create GitHub Release
+        shell: bash
+        run: |
+          release_state="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft 2>/dev/null || true)"
+          prerelease_args=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            prerelease_args=(--prerelease --latest=false)
+          fi
+
+          if [[ "$release_state" == "false" ]]; then
+            echo "GitHub Release $GITHUB_REF_NAME is already published."
+            exit 0
+          fi
+
+          if [[ "$release_state" == "true" ]]; then
+            gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber
+            gh release edit "$GITHUB_REF_NAME" --verify-tag --draft=false --title "Kanwas ${GITHUB_REF_NAME#v}" "${prerelease_args[@]}"
+          else
+            gh release create "$GITHUB_REF_NAME" release-assets/* --verify-tag --generate-notes --title "Kanwas ${GITHUB_REF_NAME#v}" "${prerelease_args[@]}"
+          fi

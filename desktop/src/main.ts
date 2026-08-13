@@ -3,6 +3,7 @@ import path from 'node:path'
 import { startLocalRuntime, type LocalRuntimeHandle } from '@kanwas/local-runtime'
 
 const QUIT_FLUSH_TIMEOUT_MS = 5_000
+const PACKAGED_SMOKE_TEST = process.argv.includes('--kanwas-smoke-test')
 
 interface StatusPayload {
   state: 'starting' | 'ready' | 'error'
@@ -159,12 +160,21 @@ async function startApplication(): Promise<void> {
     const active = runtime.getActiveVault()
     emitStatus({ state: 'ready', message: 'Kanwas is ready.', showPicker: false })
     await mainWindow.loadURL(rendererUrl(active ? `/app/w/${active.urlId}` : '/app'))
+    if (PACKAGED_SMOKE_TEST) {
+      console.log('Kanwas packaged-app smoke test passed.')
+      await shutdown()
+    }
   } catch (error) {
     emitStatus({
       state: 'error',
       message: error instanceof Error ? error.message : String(error),
       showPicker: false,
     })
+    if (PACKAGED_SMOKE_TEST) {
+      console.error('Kanwas packaged-app smoke test failed.', error)
+      process.exitCode = 1
+      await shutdown()
+    }
   }
 }
 
@@ -190,7 +200,7 @@ async function shutdown(): Promise<void> {
   if (quitInProgress) return
   quitInProgress = true
   try {
-    await waitForRendererFlush()
+    if (!PACKAGED_SMOKE_TEST) await waitForRendererFlush()
     await runtime?.flushAll().catch(() => undefined)
     await runtime?.close()
     runtime = null

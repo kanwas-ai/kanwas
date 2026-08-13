@@ -7,6 +7,8 @@
     "prepare": "husky",
     "dev": "pnpm --filter @kanwas/desktop dev",
     "build": "pnpm --filter @kanwas/desktop build",
+    "package:desktop": "pnpm --filter @kanwas/desktop package",
+    "package:desktop:dir": "pnpm --filter @kanwas/desktop package:dir",
     "test": "pnpm --filter shared test && pnpm --filter @kanwas/yjs-core test && pnpm --filter @kanwas/local-runtime test && pnpm --filter @kanwas/renderer test",
     "build:website": "pnpm --filter website build",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\""

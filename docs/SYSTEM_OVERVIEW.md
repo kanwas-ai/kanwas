@@ -180,4 +180,4 @@ A missing remembered folder is reported as unavailable and can be forgotten safe
 
 Source development builds the renderer before Electron starts and runs the runtime inside Electron's main process. There is no first-run Vite build and no dependency on a repository checkout from the running app.
 
-Installer generation, signing, notarization, auto-update, and release artifact architecture are a later electron-builder phase. Development correctness must not depend on those packaging decisions.
+Electron-builder packages the prebuilt renderer and vault templates as app resources and rebuilds `node-pty` natively on each target runner. Pull requests smoke-test unpacked Linux, macOS, and Windows apps; version tags publish installers through a gated GitHub Release workflow. Signing and macOS notarization are secret-driven and optional until certificates are configured. In-app auto-update remains outside the current release boundary.

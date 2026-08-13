@@ -58,9 +58,16 @@ pnpm --filter @kanwas/desktop bundle
 pnpm --filter @kanwas/desktop check
 ```
 
-`build` currently produces source build outputs only. Installer generation,
-code signing, notarization, auto-update, and release artifact targets are
-intentionally deferred to a later electron-builder phase.
+`build` produces source build outputs. `package:dir` creates an unpacked app
+for the host platform and `package` creates its configured electron-builder
+installers under `desktop/release/`. Native dependencies are rebuilt for the
+target Electron ABI during packaging.
+
+GitHub Actions smoke-tests unpacked apps on Linux, macOS, and Windows. A
+matching `v<desktop package version>` tag on `master` builds the complete
+release matrix before publishing one GitHub Release. Signing and notarization
+activate when their repository secrets are configured; unsigned releases work
+without those secrets for now. See [`docs/RELEASING.md`](../docs/RELEASING.md).
 
 ## Native dependency
 

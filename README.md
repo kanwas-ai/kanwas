@@ -78,7 +78,7 @@ pnpm --filter @kanwas/renderer test
 pnpm --filter @kanwas/desktop check
 ```
 
-Release installers, signing, notarization, and auto-update are intentionally deferred. The current repository supports source development of the app; a later electron-builder phase will own distributable artifacts.
+Create an unpacked production build for the current platform with `pnpm package:desktop:dir`, or create its configured installers with `pnpm package:desktop`. GitHub Actions verifies packaged startup on Linux, macOS, and Windows; version tags publish native installers through GitHub Releases. See [the release guide](./docs/RELEASING.md) for the artifact matrix, versioning, and signing setup.
 
 ## Files on disk
 
